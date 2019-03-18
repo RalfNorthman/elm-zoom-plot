@@ -1,6 +1,8 @@
 module Main exposing (..)
 
 import Browser
+import FormatNumber exposing (format)
+import FormatNumber.Locales exposing (frenchLocale)
 import Html exposing (Html, text, div, h1, img)
 import Html.Attributes exposing (src, style)
 import LineChart exposing (..)
@@ -63,6 +65,7 @@ eventsConfig =
     Events.custom
         [ Events.onMouseDown MouseDown Events.getData
         , Events.onMouseUp MouseUp Events.getData
+        , Events.onMouseMove Hover Events.getNearest
         ]
 
 
@@ -101,6 +104,14 @@ containerConfig =
         }
 
 
+customJunk : Model -> Junk.Config DataPoint msg
+customJunk model =
+    Junk.hoverOne model.hovered
+        [ ( "X", format frenchLocale << .x )
+        , ( "Y", format frenchLocale << .y )
+        ]
+
+
 chartConfig : Model -> Config DataPoint Msg
 chartConfig model =
     { x = xAxisConfig model
@@ -110,11 +121,11 @@ chartConfig model =
     , intersection = Intersection.default
     , legends = Legends.default
     , events = eventsConfig
-    , junk = Junk.default
+    , junk = customJunk model
     , grid = Grid.default
     , area = Area.default
     , line = Line.default
-    , dots = Dots.default
+    , dots = Dots.hoverOne model.hovered
     }
 
 
@@ -122,8 +133,8 @@ chart : Model -> Html Msg
 chart model =
     viewCustom
         (chartConfig model)
-        [ LineChart.line Colors.blueLight Dots.none "sin" data1
-        , LineChart.line Colors.pinkLight Dots.none "cos" data2
+        [ LineChart.line Colors.blueLight Dots.triangle "sin" data1
+        , LineChart.line Colors.pinkLight Dots.circle "cos" data2
         ]
 
 
@@ -135,6 +146,7 @@ type alias Model =
     { mouseDown : Maybe DataPoint
     , rangeX : Range.Config
     , rangeY : Range.Config
+    , hovered : Maybe DataPoint
     }
 
 
@@ -148,6 +160,7 @@ init =
     ( { mouseDown = Nothing
       , rangeX = initRange
       , rangeY = initRange
+      , hovered = Nothing
       }
     , Cmd.none
     )
@@ -201,6 +214,7 @@ newRange ma b acc =
 type Msg
     = MouseDown DataPoint
     | MouseUp DataPoint
+    | Hover (Maybe DataPoint)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -217,6 +231,9 @@ update msg model =
               }
             , Cmd.none
             )
+
+        Hover point ->
+            ( { model | hovered = point }, Cmd.none )
 
 
 
