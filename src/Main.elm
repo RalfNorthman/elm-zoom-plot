@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Browser
 import Html exposing (Html, text, div, h1, img)
-import Html.Attributes exposing (src)
+import Html.Attributes exposing (src, style)
 import LineChart exposing (..)
 import LineChart.Area as Area
 import LineChart.Axis as Axis
@@ -20,6 +20,7 @@ import LineChart.Line as Line
 import LineChart.Axis.Title as Title
 import LineChart.Axis.Range as Range
 import LineChart.Axis.Ticks as Ticks
+import LineChart.Axis.Tick as Tick
 
 
 ---- TEST-DATA ----
@@ -43,10 +44,12 @@ makeData func =
         List.map func xs
 
 
+data1 : List DataPoint
 data1 =
     makeData sin
 
 
+data2 : List DataPoint
 data2 =
     makeData cos
 
@@ -87,11 +90,22 @@ yAxisConfig model =
         }
 
 
+containerConfig : Container.Config msg
+containerConfig =
+    Container.custom
+        { attributesHtml = []
+        , attributesSvg = [ style "font-size" "10" ]
+        , size = Container.relative
+        , margin = Container.Margin 40 110 50 50
+        , id = "line-chart-1"
+        }
+
+
 chartConfig : Model -> Config DataPoint Msg
 chartConfig model =
     { x = xAxisConfig model
     , y = yAxisConfig model
-    , container = Container.responsive "line-chart-1"
+    , container = containerConfig
     , interpolation = Interpolation.default
     , intersection = Intersection.default
     , legends = Legends.default
