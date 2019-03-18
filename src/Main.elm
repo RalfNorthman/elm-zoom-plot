@@ -116,10 +116,10 @@ dragBox : DataPoint -> DataPoint -> Coordinate.System -> Svg.Svg msg
 dragBox a b system =
     Junk.rectangle system
         [ fill "rgba(200, 200, 200, 1)" ]
-        a.x
-        b.x
-        a.y
-        b.y
+        (min a.x b.x)
+        (max a.x b.x)
+        (min a.y b.y)
+        (max a.y b.y)
 
 
 hoverJunk : Model -> Junk.Config DataPoint msg
@@ -243,7 +243,7 @@ newRange ma b acc =
                         rangeDiff data1 acc
                     of
                         Just diff ->
-                            diff * 0.05 > zoomMax - zoomMin
+                            diff * 0.1 > zoomMax - zoomMin
 
                         Nothing ->
                             True
@@ -268,7 +268,13 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         MouseDown point ->
-            ( { model | mouseDown = Just point }, Cmd.none )
+            ( { model
+                | mouseDown = Just point
+                , hovered = Nothing
+                , moved = Nothing
+              }
+            , Cmd.none
+            )
 
         MouseUp point ->
             ( { model
