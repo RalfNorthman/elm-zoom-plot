@@ -22,7 +22,7 @@ import LineChart.Axis.Range as Range
 import LineChart.Axis.Ticks as Ticks
 
 
----- DATA ----
+---- TEST-DATA ----
 
 
 xs : List Float
@@ -33,30 +33,22 @@ xs =
         List.range 0 65
 
 
-ys : List Float
-ys =
-    List.map sin xs
-
-
 type alias DataPoint =
     { x : Float, y : Float }
 
 
-data : List DataPoint
-data =
-    List.map2 DataPoint xs ys
+makeData : (Float -> Float) -> List DataPoint
+makeData func =
+    List.map2 DataPoint xs <|
+        List.map func xs
 
 
-dataRangeX =
-    { min = List.minimum xs
-    , max = List.maximum xs
-    }
+data1 =
+    makeData sin
 
 
-dataRangeY =
-    { min = List.minimum ys
-    , max = List.maximum ys
-    }
+data2 =
+    makeData cos
 
 
 
@@ -116,7 +108,9 @@ chart : Model -> Html Msg
 chart model =
     viewCustom
         (chartConfig model)
-        [ LineChart.line Colors.blueLight Dots.none "sin" data ]
+        [ LineChart.line Colors.blueLight Dots.none "sin" data1
+        , LineChart.line Colors.pinkLight Dots.none "cos" data2
+        ]
 
 
 
@@ -124,8 +118,7 @@ chart model =
 
 
 type alias Model =
-    { filteredData : List DataPoint
-    , mouseDown : Maybe DataPoint
+    { mouseDown : Maybe DataPoint
     , rangeX : Range.Config
     , rangeY : Range.Config
     }
@@ -138,8 +131,7 @@ initRange =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { filteredData = data
-      , mouseDown = Nothing
+    ( { mouseDown = Nothing
       , rangeX = initRange
       , rangeY = initRange
       }
@@ -151,54 +143,45 @@ init =
 ---- UPDATE ----
 
 
-newRanges : DataPoint -> DataPoint -> ( Range.Config, Range.Config )
-newRanges a b =
+rangeDiff : List DataPoint -> (DataPoint -> Float) -> Maybe Float
+rangeDiff points acc =
     let
-        xMax =
-            max a.x b.x
-
-        xMin =
-            min a.x b.x
-
-        yMax =
-            max a.y b.y
-
-        yMin =
-            min a.y b.y
-
-        xRangeTooSmall =
-            case
-                Maybe.map2 (-) dataRangeX.max dataRangeX.min
-            of
-                Just diff ->
-                    diff * 0.05 > xMax - xMin
-
-                Nothing ->
-                    True
-
-        yRangeTooSmall =
-            case
-                Maybe.map2 (-) dataRangeY.max dataRangeY.min
-            of
-                Just diff ->
-                    diff * 0.05 > yMax - yMin
-
-                Nothing ->
-                    True
-
-        xRange =
-            if xRangeTooSmall then
-                initRange
-            else
-                Range.window xMin xMax
-
-        yRange =
-            if yRangeTooSmall then
-                initRange
-            else
-                Range.window yMin yMax
+        accessed =
+            List.map acc points
     in
-        ( xRange, yRange )
+        Maybe.map2 (-)
+            (List.maximum accessed)
+            (List.minimum accessed)
+
+
+newRange : Maybe DataPoint -> DataPoint -> (DataPoint -> Float) -> Range.Config
+newRange ma b acc =
+    case ma of
+        Just a ->
+            let
+                zoomMin =
+                    min (acc a) (acc b)
+
+                zoomMax =
+                    max (acc a) (acc b)
+
+                rangeTooSmall =
+                    case
+                        rangeDiff data1 acc
+                    of
+                        Just diff ->
+                            diff * 0.05 > zoomMax - zoomMin
+
+                        Nothing ->
+                            True
+            in
+                if rangeTooSmall then
+                    initRange
+                else
+                    Range.window zoomMin zoomMax
+
+        Nothing ->
+            initRange
 
 
 type Msg
@@ -212,23 +195,14 @@ update msg model =
         MouseDown point ->
             ( { model | mouseDown = Just point }, Cmd.none )
 
-        MouseUp upPoint ->
-            let
-                downPoint =
-                    Maybe.withDefault
-                        (DataPoint 0 0)
-                        model.mouseDown
-
-                ( rx, ry ) =
-                    newRanges downPoint upPoint
-            in
-                ( { model
-                    | rangeX = rx
-                    , rangeY = ry
-                    , mouseDown = Nothing
-                  }
-                , Cmd.none
-                )
+        MouseUp point ->
+            ( { model
+                | rangeX = newRange model.mouseDown point .x
+                , rangeY = newRange model.mouseDown point .y
+                , mouseDown = Nothing
+              }
+            , Cmd.none
+            )
 
 
 
