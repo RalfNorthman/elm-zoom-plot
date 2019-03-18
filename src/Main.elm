@@ -7,6 +7,7 @@ import LineChart exposing (..)
 import LineChart.Area as Area
 import LineChart.Axis as Axis
 import LineChart.Axis.Intersection as Intersection
+import LineChart.Axis.Line as AxisLine
 import LineChart.Colors as Colors
 import LineChart.Container as Container
 import LineChart.Dots as Dots
@@ -16,11 +17,15 @@ import LineChart.Interpolation as Interpolation
 import LineChart.Junk as Junk
 import LineChart.Legends as Legends
 import LineChart.Line as Line
+import LineChart.Axis.Title as Title
+import LineChart.Axis.Range as Range
+import LineChart.Axis.Ticks as Ticks
 
 
 ---- DATA ----
 
 
+xs : List Float
 xs =
     List.map
         (\x -> toFloat x * 0.1)
@@ -28,6 +33,7 @@ xs =
         List.range 0 65
 
 
+ys : List Float
 ys =
     List.map sin xs
 
@@ -36,16 +42,25 @@ type alias DataPoint =
     { x : Float, y : Float }
 
 
+data : List DataPoint
 data =
     List.map2 DataPoint xs ys
 
 
+dataRangeX =
+    { min = List.minimum xs
+    , max = List.maximum xs
+    }
+
+
+dataRangeY =
+    { min = List.minimum ys
+    , max = List.maximum ys
+    }
+
+
 
 ---- CHART ----
-
-
-decoder =
-    Events.map2 Tuple.pair Events.getNearest Events.getData
 
 
 eventsConfig : Events.Config DataPoint Msg
@@ -56,11 +71,35 @@ eventsConfig =
         ]
 
 
-chartConfig : Config DataPoint Msg
-chartConfig =
-    { x = Axis.default 700 "x" .x
-    , y = Axis.default 400 "y" .y
-    , container = Container.default "line-chart-1"
+xAxisConfig : Model -> Axis.Config DataPoint msg
+xAxisConfig model =
+    Axis.custom
+        { title = Title.default "x"
+        , variable = Just << .x
+        , pixels = 700
+        , range = model.rangeX
+        , axisLine = AxisLine.rangeFrame Colors.black
+        , ticks = Ticks.default
+        }
+
+
+yAxisConfig : Model -> Axis.Config DataPoint msg
+yAxisConfig model =
+    Axis.custom
+        { title = Title.default "y"
+        , variable = Just << .y
+        , pixels = 400
+        , range = model.rangeY
+        , axisLine = AxisLine.rangeFrame Colors.black
+        , ticks = Ticks.default
+        }
+
+
+chartConfig : Model -> Config DataPoint Msg
+chartConfig model =
+    { x = xAxisConfig model
+    , y = yAxisConfig model
+    , container = Container.responsive "line-chart-1"
     , interpolation = Interpolation.default
     , intersection = Intersection.default
     , legends = Legends.default
@@ -73,10 +112,11 @@ chartConfig =
     }
 
 
-chart : List DataPoint -> Html Msg
-chart points =
-    viewCustom chartConfig
-        [ LineChart.line Colors.blueLight Dots.none "sin" points ]
+chart : Model -> Html Msg
+chart model =
+    viewCustom
+        (chartConfig model)
+        [ LineChart.line Colors.blueLight Dots.none "sin" data ]
 
 
 
@@ -86,13 +126,22 @@ chart points =
 type alias Model =
     { filteredData : List DataPoint
     , mouseDown : Maybe DataPoint
+    , rangeX : Range.Config
+    , rangeY : Range.Config
     }
+
+
+initRange : Range.Config
+initRange =
+    Range.padded 20 20
 
 
 init : ( Model, Cmd Msg )
 init =
     ( { filteredData = data
       , mouseDown = Nothing
+      , rangeX = initRange
+      , rangeY = initRange
       }
     , Cmd.none
     )
@@ -102,33 +151,54 @@ init =
 ---- UPDATE ----
 
 
-filterDownUp : DataPoint -> DataPoint -> List DataPoint -> List DataPoint
-filterDownUp a b list =
+newRanges : DataPoint -> DataPoint -> ( Range.Config, Range.Config )
+newRanges a b =
     let
-        x_max =
+        xMax =
             max a.x b.x
 
-        x_min =
+        xMin =
             min a.x b.x
 
-        y_max =
+        yMax =
             max a.y b.y
 
-        y_min =
+        yMin =
             min a.y b.y
 
-        myTest : DataPoint -> Bool
-        myTest p =
-            p.x
-                > x_min
-                && p.x
-                < x_max
-                && p.y
-                > y_min
-                && p.y
-                < y_max
+        xRangeTooSmall =
+            case
+                Maybe.map2 (-) dataRangeX.max dataRangeX.min
+            of
+                Just diff ->
+                    diff * 0.05 > xMax - xMin
+
+                Nothing ->
+                    True
+
+        yRangeTooSmall =
+            case
+                Maybe.map2 (-) dataRangeY.max dataRangeY.min
+            of
+                Just diff ->
+                    diff * 0.05 > yMax - yMin
+
+                Nothing ->
+                    True
+
+        xRange =
+            if xRangeTooSmall then
+                initRange
+            else
+                Range.window xMin xMax
+
+        yRange =
+            if yRangeTooSmall then
+                initRange
+            else
+                Range.window yMin yMax
     in
-        list |> List.filter myTest
+        ( xRange, yRange )
 
 
 type Msg
@@ -149,18 +219,12 @@ update msg model =
                         (DataPoint 0 0)
                         model.mouseDown
 
-                filtered =
-                    case
-                        filterDownUp downPoint upPoint data
-                    of
-                        [] ->
-                            data
-
-                        list ->
-                            list
+                ( rx, ry ) =
+                    newRanges downPoint upPoint
             in
                 ( { model
-                    | filteredData = filtered
+                    | rangeX = rx
+                    , rangeY = ry
                     , mouseDown = Nothing
                   }
                 , Cmd.none
@@ -173,7 +237,7 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    chart model.filteredData
+    chart model
 
 
 
