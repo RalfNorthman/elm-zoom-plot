@@ -19,10 +19,13 @@ import LineChart.Interpolation as Interpolation
 import LineChart.Junk as Junk
 import LineChart.Legends as Legends
 import LineChart.Line as Line
+import LineChart.Coordinate as Coordinate
 import LineChart.Axis.Title as Title
 import LineChart.Axis.Range as Range
 import LineChart.Axis.Ticks as Ticks
 import LineChart.Axis.Tick as Tick
+import Svg
+import Svg.Attributes exposing (fill)
 
 
 ---- TEST-DATA ----
@@ -60,12 +63,17 @@ data2 =
 ---- CHART ----
 
 
-eventsConfig : Events.Config DataPoint Msg
-eventsConfig =
+eventsConfig : Model -> Events.Config DataPoint Msg
+eventsConfig model =
     Events.custom
         [ Events.onMouseDown MouseDown Events.getData
         , Events.onMouseUp MouseUp Events.getData
-        , Events.onMouseMove Hover Events.getNearest
+        , case model.mouseDown of
+            Nothing ->
+                Events.onMouseMove Hover Events.getNearest
+
+            Just _ ->
+                Events.onMouseMove Move Events.getData
         ]
 
 
@@ -104,12 +112,48 @@ containerConfig =
         }
 
 
-customJunk : Model -> Junk.Config DataPoint msg
-customJunk model =
+dragBox : DataPoint -> DataPoint -> Coordinate.System -> Svg.Svg msg
+dragBox a b system =
+    Junk.rectangle system
+        [ fill "rgba(200, 200, 200, 1)" ]
+        a.x
+        b.x
+        a.y
+        b.y
+
+
+hoverJunk : Model -> Junk.Config DataPoint msg
+hoverJunk model =
     Junk.hoverOne model.hovered
         [ ( "X", format frenchLocale << .x )
         , ( "Y", format frenchLocale << .y )
         ]
+
+
+customJunk : Model -> Junk.Config DataPoint msg
+customJunk model =
+    case model.mouseDown of
+        Nothing ->
+            hoverJunk model
+
+        Just downPoint ->
+            case model.moved of
+                Nothing ->
+                    hoverJunk model
+
+                Just movedPoint ->
+                    Junk.custom
+                        (\sys ->
+                            { below =
+                                [ dragBox
+                                    downPoint
+                                    movedPoint
+                                    sys
+                                ]
+                            , above = []
+                            , html = []
+                            }
+                        )
 
 
 chartConfig : Model -> Config DataPoint Msg
@@ -120,7 +164,7 @@ chartConfig model =
     , interpolation = Interpolation.default
     , intersection = Intersection.default
     , legends = Legends.default
-    , events = eventsConfig
+    , events = eventsConfig model
     , junk = customJunk model
     , grid = Grid.default
     , area = Area.default
@@ -147,6 +191,7 @@ type alias Model =
     , rangeX : Range.Config
     , rangeY : Range.Config
     , hovered : Maybe DataPoint
+    , moved : Maybe DataPoint
     }
 
 
@@ -161,6 +206,7 @@ init =
       , rangeX = initRange
       , rangeY = initRange
       , hovered = Nothing
+      , moved = Nothing
       }
     , Cmd.none
     )
@@ -215,6 +261,7 @@ type Msg
     = MouseDown DataPoint
     | MouseUp DataPoint
     | Hover (Maybe DataPoint)
+    | Move DataPoint
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -234,6 +281,9 @@ update msg model =
 
         Hover point ->
             ( { model | hovered = point }, Cmd.none )
+
+        Move point ->
+            ( { model | moved = Just point }, Cmd.none )
 
 
 
