@@ -31,22 +31,22 @@ import Svg.Attributes exposing (fill)
 ---- TEST-DATA ----
 
 
-xs : List Float
-xs =
-    List.map
-        (\x -> toFloat x * 0.1)
-    <|
-        List.range 0 65
-
-
 type alias DataPoint =
     { x : Float, y : Float }
 
 
 makeData : (Float -> Float) -> List DataPoint
 makeData func =
-    List.map2 DataPoint xs <|
-        List.map func xs
+    let
+        xs : List Float
+        xs =
+            List.map
+                (\x -> toFloat x * 0.1)
+            <|
+                List.range 0 65
+    in
+        List.map2 DataPoint xs <|
+            List.map func xs
 
 
 data1 : List DataPoint
@@ -122,24 +122,50 @@ dragBox a b system =
         (max a.y b.y)
 
 
-hoverJunk : Model -> Junk.Config DataPoint msg
-hoverJunk model =
-    Junk.hoverOne model.hovered
-        [ ( "X", format frenchLocale << .x )
-        , ( "Y", format frenchLocale << .y )
-        ]
+hoverLabel : DataPoint -> Coordinate.System -> Svg.Svg msg
+hoverLabel hovered =
+    let
+        labelText =
+            "X: "
+                ++ (format frenchLocale hovered.x)
+                ++ " Y: "
+                ++ (format frenchLocale hovered.y)
+    in
+        \sys ->
+            Junk.labelAt
+                sys
+                hovered.x
+                hovered.y
+                10
+                -10
+                ""
+                Colors.black
+                labelText
 
 
 customJunk : Model -> Junk.Config DataPoint msg
 customJunk model =
     case model.mouseDown of
         Nothing ->
-            hoverJunk model
+            case model.hovered of
+                Nothing ->
+                    Junk.default
+
+                Just hovered ->
+                    Junk.custom
+                        (\sys ->
+                            { below = []
+                            , above =
+                                [ hoverLabel hovered sys ]
+                            , html =
+                                []
+                            }
+                        )
 
         Just downPoint ->
             case model.moved of
                 Nothing ->
-                    hoverJunk model
+                    Junk.default
 
                 Just movedPoint ->
                     Junk.custom
@@ -150,8 +176,10 @@ customJunk model =
                                     movedPoint
                                     sys
                                 ]
-                            , above = []
-                            , html = []
+                            , above =
+                                []
+                            , html =
+                                []
                             }
                         )
 
