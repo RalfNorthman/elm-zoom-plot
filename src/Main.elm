@@ -24,8 +24,10 @@ import LineChart.Axis.Title as Title
 import LineChart.Axis.Range as Range
 import LineChart.Axis.Ticks as Ticks
 import LineChart.Axis.Tick as Tick
-import Svg
-import Svg.Attributes exposing (fill)
+import Svg exposing (Svg)
+import TypedSvg.Attributes exposing (fill, stroke, strokeDasharray)
+import TypedSvg.Attributes.InPx exposing (strokeWidth, fontSize)
+import TypedSvg.Types exposing (Fill(..))
 
 
 ---- TEST-DATA ----
@@ -43,7 +45,7 @@ makeData func =
             List.map
                 (\x -> toFloat x * 0.1)
             <|
-                List.range 0 65
+                List.range -221 65
     in
         List.map2 DataPoint xs <|
             List.map func xs
@@ -51,12 +53,38 @@ makeData func =
 
 data1 : List DataPoint
 data1 =
-    makeData sin
+    makeData (\x -> 0.01 ^ (0.04 * x) + 3.5 * (sin (2 * x)))
 
 
 data2 : List DataPoint
 data2 =
     makeData cos
+
+
+data3 : List DataPoint
+data3 =
+    makeData (\x -> 0.01 * x * x - 0.1 * x - 0.5)
+
+
+data4 : List DataPoint
+data4 =
+    makeData (\x -> 0.01 * x ^ 2 - 0.1 * x - 0.5 + sin x)
+
+
+data5 : List DataPoint
+data5 =
+    makeData
+        (\x -> 0.03 * x ^ 2 - 0.5 * x - 3.5 + 5 * sin (3 * x))
+
+
+lines : List (Series DataPoint)
+lines =
+    [ LineChart.line Colors.blueLight Dots.triangle "exp" data1
+    , LineChart.line Colors.tealLight Dots.circle "cos" data2
+    , LineChart.line Colors.greenLight Dots.square "poly" data3
+    , LineChart.line Colors.goldLight Dots.diamond "polysin" data4
+    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" data5
+    ]
 
 
 format : Float -> String
@@ -90,10 +118,10 @@ xAxisConfig model =
     Axis.custom
         { title = Title.default "x"
         , variable = Just << .x
-        , pixels = 700
+        , pixels = 800
         , range = model.rangeX
         , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = Ticks.default
+        , ticks = ticksConfig
         }
 
 
@@ -102,35 +130,61 @@ yAxisConfig model =
     Axis.custom
         { title = Title.default "y"
         , variable = Just << .y
-        , pixels = 400
+        , pixels = 380
         , range = model.rangeY
         , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = Ticks.default
+        , ticks = ticksConfig
         }
+
+
+ticksConfig : Ticks.Config msg
+ticksConfig =
+    Ticks.floatCustom 7 customTick
+
+
+customTick : Float -> Tick.Config msg
+customTick value =
+    let
+        label =
+            Junk.label Colors.black (format value)
+    in
+        Tick.custom
+            { position = value
+            , color = Colors.black
+            , width = 1
+            , length = 2
+            , grid = False
+            , direction = Tick.negative
+            , label = Just label
+            }
 
 
 containerConfig : Container.Config msg
 containerConfig =
     Container.custom
         { attributesHtml = []
-        , attributesSvg = [ style "font-size" "10" ]
+        , attributesSvg = [ fontSize 10 ]
         , size = Container.relative
-        , margin = Container.Margin 40 110 50 50
+        , margin = Container.Margin 40 110 50 70
         , id = "line-chart-1"
         }
 
 
-dragBox : DataPoint -> DataPoint -> Coordinate.System -> Svg.Svg msg
+dragBox : DataPoint -> DataPoint -> Coordinate.System -> Svg msg
 dragBox a b system =
     Junk.rectangle system
-        [ fill "rgba(200, 200, 200, 1)" ]
+        [ fill <| Fill Colors.grayLightest
+        , stroke Colors.grayLight
+        , strokeWidth 1
+        , strokeDasharray "3 3"
+        ]
         (min a.x b.x)
         (max a.x b.x)
         (min a.y b.y)
         (max a.y b.y)
 
 
-hoverJunk : DataPoint -> Coordinate.System -> List (Svg.Svg msg)
+hoverJunk : DataPoint -> Coordinate.System -> List (Svg msg)
 hoverJunk hovered system =
     let
         textX =
@@ -244,9 +298,7 @@ chart : Model -> Html Msg
 chart model =
     viewCustom
         (chartConfig model)
-        [ LineChart.line Colors.blueLight Dots.triangle "sin" data1
-        , LineChart.line Colors.pinkLight Dots.circle "cos" data2
-        ]
+        lines
 
 
 
