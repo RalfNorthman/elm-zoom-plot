@@ -1,7 +1,7 @@
 module Main exposing (..)
 
 import Browser
-import FormatNumber exposing (format)
+import NumberSuffix exposing (scientificConfig)
 import FormatNumber.Locales exposing (frenchLocale)
 import Html exposing (Html, text, div, h1, img)
 import Html.Attributes exposing (src, style)
@@ -59,6 +59,13 @@ data2 =
     makeData cos
 
 
+format : Float -> String
+format number =
+    NumberSuffix.format
+        { scientificConfig | locale = frenchLocale }
+        number
+
+
 
 ---- CHART ----
 
@@ -74,6 +81,7 @@ eventsConfig model =
 
             Just _ ->
                 Events.onMouseMove Move Events.getData
+        , Events.onMouseLeave MouseLeave
         ]
 
 
@@ -124,14 +132,42 @@ dragBox a b system =
 
 hoverJunk : Model -> Junk.Config DataPoint msg
 hoverJunk model =
-    Junk.hoverOne model.hovered
-        [ ( "X", format frenchLocale << .x )
-        , ( "Y", format frenchLocale << .y )
-        ]
+    case model.hovered of
+        Just hovered ->
+            let
+                textX =
+                    format hovered.x
+
+                textY =
+                    format hovered.y
+
+                label sys offsetY text =
+                    Junk.labelAt
+                        sys
+                        hovered.x
+                        hovered.y
+                        8
+                        offsetY
+                        "anchor-blah"
+                        Colors.black
+                        text
+            in
+                Junk.custom <|
+                    \sys ->
+                        { below = []
+                        , above =
+                            [ label sys -15 textX
+                            , label sys -5 textY
+                            ]
+                        , html = []
+                        }
+
+        Nothing ->
+            Junk.default
 
 
-customJunk : Model -> Junk.Config DataPoint msg
-customJunk model =
+junkConfig : Model -> Junk.Config DataPoint msg
+junkConfig model =
     case model.mouseDown of
         Nothing ->
             hoverJunk model
@@ -156,6 +192,35 @@ customJunk model =
                         )
 
 
+dotsConfig : Maybe DataPoint -> Dots.Config DataPoint
+dotsConfig hovered =
+    let
+        noDot =
+            Dots.full 0
+
+        dot =
+            Dots.disconnected 10 1
+
+        styleLegend _ =
+            dot
+
+        styleIndividual point =
+            case hovered of
+                Just hoveredPoint ->
+                    if point == hoveredPoint then
+                        dot
+                    else
+                        noDot
+
+                Nothing ->
+                    noDot
+    in
+        Dots.customAny
+            { legend = styleLegend
+            , individual = styleIndividual
+            }
+
+
 chartConfig : Model -> Config DataPoint Msg
 chartConfig model =
     { x = xAxisConfig model
@@ -165,11 +230,11 @@ chartConfig model =
     , intersection = Intersection.default
     , legends = Legends.default
     , events = eventsConfig model
-    , junk = customJunk model
+    , junk = junkConfig model
     , grid = Grid.default
     , area = Area.default
     , line = Line.default
-    , dots = Dots.hoverOne model.hovered
+    , dots = dotsConfig model.hovered
     }
 
 
@@ -262,6 +327,7 @@ type Msg
     | MouseUp DataPoint
     | Hover (Maybe DataPoint)
     | Move DataPoint
+    | MouseLeave
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -290,6 +356,9 @@ update msg model =
 
         Move point ->
             ( { model | moved = Just point }, Cmd.none )
+
+        MouseLeave ->
+            ( { model | hovered = Nothing }, Cmd.none )
 
 
 
