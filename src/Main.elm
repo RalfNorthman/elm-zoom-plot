@@ -19,7 +19,7 @@ import LineChart.Interpolation as Interpolation
 import LineChart.Junk as Junk
 import LineChart.Legends as Legends
 import LineChart.Line as Line
-import LineChart.Coordinate as Coordinate
+import LineChart.Coordinate as Coordinate exposing (Range)
 import LineChart.Axis.Title as Title
 import LineChart.Axis.Range as Range
 import LineChart.Axis.Ticks as Ticks
@@ -119,7 +119,7 @@ xAxisConfig model =
         { title = Title.default "x"
         , variable = Just << .x
         , pixels = 800
-        , range = model.rangeX
+        , range = model.xConfig
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = ticksConfig
         }
@@ -131,7 +131,7 @@ yAxisConfig model =
         { title = Title.default "y"
         , variable = Just << .y
         , pixels = 380
-        , range = model.rangeY
+        , range = model.yConfig
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = ticksConfig
         }
@@ -307,8 +307,10 @@ chart model =
 
 type alias Model =
     { mouseDown : Maybe DataPoint
-    , rangeX : Range.Config
-    , rangeY : Range.Config
+    , rangeX : Maybe Range
+    , rangeY : Maybe Range
+    , xConfig : Range.Config
+    , yConfig : Range.Config
     , hovered : Maybe DataPoint
     , moved : Maybe DataPoint
     }
@@ -322,8 +324,10 @@ initRange =
 init : ( Model, Cmd Msg )
 init =
     ( { mouseDown = Nothing
-      , rangeX = initRange
-      , rangeY = initRange
+      , rangeX = Nothing
+      , rangeY = Nothing
+      , xConfig = initRange
+      , yConfig = initRange
       , hovered = Nothing
       , moved = Nothing
       }
@@ -346,11 +350,35 @@ rangeDiff points acc =
             (List.minimum accessed)
 
 
-newRange : Maybe DataPoint -> DataPoint -> (DataPoint -> Float) -> Range.Config
-newRange ma b acc =
-    case ma of
+type XY
+    = X
+    | Y
+
+
+newRange : Model -> DataPoint -> XY -> ( Maybe Range, Range.Config )
+newRange model mouseUp xy =
+    case model.mouseDown of
         Just a ->
             let
+                b =
+                    mouseUp
+
+                acc =
+                    case xy of
+                        X ->
+                            .x
+
+                        Y ->
+                            .y
+
+                range =
+                    case xy of
+                        X ->
+                            model.rangeX
+
+                        Y ->
+                            model.rangeY
+
                 zoomMin =
                     min (acc a) (acc b)
 
@@ -358,22 +386,29 @@ newRange ma b acc =
                     max (acc a) (acc b)
 
                 rangeTooSmall =
-                    case
-                        rangeDiff data1 acc
-                    of
-                        Just diff ->
-                            diff * 0.1 > zoomMax - zoomMin
-
+                    case range of
                         Nothing ->
-                            True
+                            case
+                                rangeDiff data1 acc
+                            of
+                                Just diff ->
+                                    diff * 0.06 > zoomMax - zoomMin
+
+                                Nothing ->
+                                    True
+
+                        Just { min, max } ->
+                            (max - min) * 0.06 > zoomMax - zoomMin
             in
                 if rangeTooSmall then
-                    initRange
+                    ( Nothing, initRange )
                 else
-                    Range.window zoomMin zoomMax
+                    ( Just <| Range zoomMin zoomMax
+                    , Range.window zoomMin zoomMax
+                    )
 
         Nothing ->
-            initRange
+            ( Nothing, initRange )
 
 
 type Msg
@@ -397,13 +432,22 @@ update msg model =
             )
 
         MouseUp point ->
-            ( { model
-                | rangeX = newRange model.mouseDown point .x
-                , rangeY = newRange model.mouseDown point .y
-                , mouseDown = Nothing
-              }
-            , Cmd.none
-            )
+            let
+                ( rx, xc ) =
+                    newRange model point X
+
+                ( ry, yc ) =
+                    newRange model point Y
+            in
+                ( { model
+                    | xConfig = xc
+                    , yConfig = yc
+                    , rangeX = rx
+                    , rangeY = ry
+                    , mouseDown = Nothing
+                  }
+                , Cmd.none
+                )
 
         Hover point ->
             ( { model | hovered = point }, Cmd.none )
