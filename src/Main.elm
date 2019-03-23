@@ -31,22 +31,22 @@ import Svg.Attributes exposing (fill)
 ---- TEST-DATA ----
 
 
-xs : List Float
-xs =
-    List.map
-        (\x -> toFloat x * 0.1)
-    <|
-        List.range 0 65
-
-
 type alias DataPoint =
     { x : Float, y : Float }
 
 
 makeData : (Float -> Float) -> List DataPoint
 makeData func =
-    List.map2 DataPoint xs <|
-        List.map func xs
+    let
+        xs : List Float
+        xs =
+            List.map
+                (\x -> toFloat x * 0.1)
+            <|
+                List.range 0 65
+    in
+        List.map2 DataPoint xs <|
+            List.map func xs
 
 
 data1 : List DataPoint
@@ -130,52 +130,52 @@ dragBox a b system =
         (max a.y b.y)
 
 
-hoverJunk : Model -> Junk.Config DataPoint msg
-hoverJunk model =
-    case model.hovered of
-        Just hovered ->
-            let
-                textX =
-                    format hovered.x
+hoverJunk : DataPoint -> Coordinate.System -> List (Svg.Svg msg)
+hoverJunk hovered system =
+    let
+        textX =
+            format hovered.x
 
-                textY =
-                    format hovered.y
+        textY =
+            format hovered.y
 
-                label sys offsetY text =
-                    Junk.labelAt
-                        sys
-                        hovered.x
-                        hovered.y
-                        8
-                        offsetY
-                        "anchor-blah"
-                        Colors.black
-                        text
-            in
-                Junk.custom <|
-                    \sys ->
-                        { below = []
-                        , above =
-                            [ label sys -15 textX
-                            , label sys -5 textY
-                            ]
-                        , html = []
-                        }
-
-        Nothing ->
-            Junk.default
+        label sys offsetY text =
+            Junk.labelAt
+                sys
+                hovered.x
+                hovered.y
+                8
+                offsetY
+                "anchor-blah"
+                Colors.black
+                text
+    in
+        [ label system -15 textX
+        , label system -5 textY
+        ]
 
 
 junkConfig : Model -> Junk.Config DataPoint msg
 junkConfig model =
     case model.mouseDown of
         Nothing ->
-            hoverJunk model
+            case model.hovered of
+                Nothing ->
+                    Junk.default
+
+                Just hovered ->
+                    Junk.custom
+                        (\sys ->
+                            { below = []
+                            , above = hoverJunk hovered sys
+                            , html = []
+                            }
+                        )
 
         Just downPoint ->
             case model.moved of
                 Nothing ->
-                    hoverJunk model
+                    Junk.default
 
                 Just movedPoint ->
                     Junk.custom
@@ -186,8 +186,10 @@ junkConfig model =
                                     movedPoint
                                     sys
                                 ]
-                            , above = []
-                            , html = []
+                            , above =
+                                []
+                            , html =
+                                []
                             }
                         )
 
