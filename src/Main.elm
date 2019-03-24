@@ -3,7 +3,8 @@ module Main exposing (..)
 import Browser
 import Browser.Events
 import Browser.Dom exposing (Viewport, Error, getViewportOf)
-import Task
+import Task exposing (Task)
+import Debug
 import NumberSuffix exposing (scientificConfig)
 import FormatNumber.Locales exposing (frenchLocale)
 import Html exposing (Html)
@@ -92,7 +93,7 @@ format number =
 ---- CHART ----
 
 
-eventsConfig : Model -> Events.Config DataPoint Msg
+eventsConfig : PlotState -> Events.Config DataPoint PlotMsg
 eventsConfig model =
     Events.custom
         [ Events.onMouseDown MouseDown Events.getData
@@ -107,7 +108,7 @@ eventsConfig model =
         ]
 
 
-xAxisConfig : Model -> Axis.Config DataPoint msg
+xAxisConfig : PlotState -> Axis.Config DataPoint msg
 xAxisConfig model =
     Axis.custom
         { title = Title.default "x"
@@ -119,7 +120,7 @@ xAxisConfig model =
         }
 
 
-yAxisConfig : Model -> Axis.Config DataPoint msg
+yAxisConfig : PlotState -> Axis.Config DataPoint msg
 yAxisConfig model =
     Axis.custom
         { title = Title.default "y"
@@ -203,7 +204,7 @@ hoverJunk hovered system =
         ]
 
 
-junkConfig : Model -> Junk.Config DataPoint msg
+junkConfig : PlotState -> Junk.Config DataPoint msg
 junkConfig model =
     case model.mouseDown of
         Nothing ->
@@ -264,7 +265,7 @@ dotsConfig hovered =
             }
 
 
-chartConfig : Model -> Config DataPoint Msg
+chartConfig : PlotState -> Config DataPoint PlotMsg
 chartConfig model =
     { x = xAxisConfig model
     , y = yAxisConfig model
@@ -281,7 +282,7 @@ chartConfig model =
     }
 
 
-chart : Model -> Lines -> Html Msg
+chart : PlotState -> Lines -> Html PlotMsg
 chart model lines =
     viewCustom
         (chartConfig model)
@@ -293,6 +294,12 @@ chart model lines =
 
 
 type alias Model =
+    { plot1 : PlotState
+    , plot2 : PlotState
+    }
+
+
+type alias PlotState =
     { mouseDown : Maybe DataPoint
     , rangeX : Maybe Range
     , rangeY : Maybe Range
@@ -302,6 +309,8 @@ type alias Model =
     , moved : Maybe DataPoint
     , plotWidth : Float
     , plotHeight : Float
+    , id : Id
+    , nr : Plot
     }
 
 
@@ -310,20 +319,38 @@ unZoomed =
     Range.padded 20 20
 
 
+plotInit : Id -> Plot -> PlotState
+plotInit plotId nr =
+    { mouseDown = Nothing
+    , rangeX = Nothing
+    , rangeY = Nothing
+    , xConfig = unZoomed
+    , yConfig = unZoomed
+    , hovered = Nothing
+    , moved = Nothing
+    , plotWidth = 0
+    , plotHeight = 0
+    , id = plotId
+    , nr = nr
+    }
+
+
 init : ( Model, Cmd Msg )
 init =
-    ( { mouseDown = Nothing
-      , rangeX = Nothing
-      , rangeY = Nothing
-      , xConfig = unZoomed
-      , yConfig = unZoomed
-      , hovered = Nothing
-      , moved = Nothing
-      , plotWidth = 0
-      , plotHeight = 0
+    ( { plot1 = plotInit id1 Plot1
+      , plot2 = plotInit id2 Plot2
       }
-    , attemptGetDims
+    , getDims
     )
+
+
+getDims : Cmd Msg
+getDims =
+    Task.sequence
+        [ taskGetDims id1
+        , taskGetDims id2
+        ]
+        |> Task.attempt NewDims
 
 
 
@@ -346,9 +373,9 @@ type XY
     | Y
 
 
-newRange : Model -> DataPoint -> XY -> ( Maybe Range, Range.Config )
-newRange model mouseUp xy =
-    case model.mouseDown of
+newRange : PlotState -> DataPoint -> XY -> ( Maybe Range, Range.Config )
+newRange state mouseUp xy =
+    case state.mouseDown of
         Just a ->
             let
                 b =
@@ -365,10 +392,10 @@ newRange model mouseUp xy =
                 range =
                     case xy of
                         X ->
-                            model.rangeX
+                            state.rangeX
 
                         Y ->
-                            model.rangeY
+                            state.rangeY
 
                 zoomMin =
                     min (acc a) (acc b)
@@ -408,80 +435,111 @@ newRange model mouseUp xy =
             ( Nothing, unZoomed )
 
 
+type alias Id =
+    String
+
+
+type Plot
+    = Plot1
+    | Plot2
+
+
 type Msg
+    = Plot Plot PlotMsg
+    | Resize Int Int
+    | NewDims (Result Error (List Viewport))
+
+
+type PlotMsg
     = MouseDown DataPoint
     | MouseUp DataPoint
     | Hover (Maybe DataPoint)
     | Move DataPoint
     | MouseLeave
-    | Resize Int Int
-    | NewDims (Result Error Viewport)
+    | Dims Viewport
 
 
-attemptGetDims : Cmd Msg
-attemptGetDims =
-    Task.attempt NewDims <| getViewportOf id1
+taskGetDims : Id -> Task Error Viewport
+taskGetDims plotId =
+    getViewportOf plotId
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        Plot Plot1 plotMsg ->
+            ( { model | plot1 = plotUpdate plotMsg model.plot1 }
+            , Cmd.none
+            )
+
+        Plot Plot2 plotMsg ->
+            ( { model | plot2 = plotUpdate plotMsg model.plot2 }
+            , Cmd.none
+            )
+
+        Resize _ _ ->
+            ( model, getDims )
+
+        NewDims result ->
+            case result of
+                Ok [ dims1, dims2 ] ->
+                    ( { model
+                        | plot1 =
+                            plotUpdate
+                                (Dims dims1)
+                                model.plot1
+                        , plot2 =
+                            plotUpdate
+                                (Dims dims2)
+                                model.plot2
+                      }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+
+plotUpdate : PlotMsg -> PlotState -> PlotState
+plotUpdate msg state =
+    case msg of
         MouseDown point ->
-            ( { model
+            { state
                 | mouseDown = Just point
                 , hovered = Nothing
                 , moved = Nothing
-              }
-            , Cmd.none
-            )
+            }
 
         MouseUp point ->
             let
                 ( rx, xc ) =
-                    newRange model point X
+                    newRange state point X
 
                 ( ry, yc ) =
-                    newRange model point Y
+                    newRange state point Y
             in
-                ( { model
+                { state
                     | xConfig = xc
                     , yConfig = yc
                     , rangeX = rx
                     , rangeY = ry
                     , mouseDown = Nothing
-                  }
-                , Cmd.none
-                )
+                }
 
         Hover point ->
-            ( { model | hovered = point }, Cmd.none )
+            { state | hovered = point }
 
         Move point ->
-            ( { model | moved = Just point }, Cmd.none )
+            { state | moved = Just point }
 
         MouseLeave ->
-            ( { model | hovered = Nothing }, Cmd.none )
+            { state | hovered = Nothing }
 
-        Resize _ _ ->
-            ( model, attemptGetDims )
-
-        NewDims result ->
-            case result of
-                Ok { viewport } ->
-                    ( { model
-                        | plotWidth = viewport.width
-                        , plotHeight = viewport.height
-                      }
-                    , Cmd.none
-                    )
-
-                Err _ ->
-                    ( { model
-                        | plotWidth = 1
-                        , plotHeight = 1
-                      }
-                    , Cmd.none
-                    )
+        Dims { viewport } ->
+            { state
+                | plotWidth = viewport.width
+                , plotHeight = viewport.height
+            }
 
 
 
@@ -522,15 +580,17 @@ id2 =
     "plot2"
 
 
-plot : Model -> String -> Lines -> Element Msg
-plot model str lines =
-    el
-        [ width fill
-        , height fill
-        , id str
-        ]
-    <|
-        html (chart model lines)
+plot : Plot -> PlotState -> String -> Lines -> Element Msg
+plot nr state str lines =
+    Element.map (\msg -> Plot nr msg)
+        (el
+            [ width fill
+            , height fill
+            , id str
+            ]
+         <|
+            html (chart state lines)
+        )
 
 
 view : Model -> Html Msg
@@ -538,7 +598,7 @@ view model =
     Element.layout
         [ width fill
         , height fill
-        , padding 5
+        , padding 10
         ]
     <|
         row
@@ -546,8 +606,8 @@ view model =
             , height fill
             , padding 5
             ]
-            [ plot model id1 lines1
-            , plot model id2 lines2
+            [ plot Plot1 model.plot1 id1 lines1
+            , plot Plot2 model.plot2 id2 lines2
             ]
 
 
