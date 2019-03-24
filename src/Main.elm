@@ -94,11 +94,11 @@ format number =
 
 
 eventsConfig : PlotState -> Events.Config DataPoint PlotMsg
-eventsConfig model =
+eventsConfig state =
     Events.custom
         [ Events.onMouseDown MouseDown Events.getData
         , Events.onMouseUp MouseUp Events.getData
-        , case model.mouseDown of
+        , case state.mouseDown of
             Nothing ->
                 Events.onMouseMove Hover Events.getNearest
 
@@ -109,24 +109,24 @@ eventsConfig model =
 
 
 xAxisConfig : PlotState -> Axis.Config DataPoint msg
-xAxisConfig model =
+xAxisConfig state =
     Axis.custom
         { title = Title.default "x"
         , variable = Just << .x
-        , pixels = round model.plotWidth
-        , range = model.xConfig
+        , pixels = round state.plotWidth
+        , range = state.xConfig
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = ticksConfig
         }
 
 
 yAxisConfig : PlotState -> Axis.Config DataPoint msg
-yAxisConfig model =
+yAxisConfig state =
     Axis.custom
         { title = Title.default "y"
         , variable = Just << .y
-        , pixels = round model.plotHeight
-        , range = model.yConfig
+        , pixels = round state.plotHeight
+        , range = state.yConfig
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = ticksConfig
         }
@@ -205,10 +205,10 @@ hoverJunk hovered system =
 
 
 junkConfig : PlotState -> Junk.Config DataPoint msg
-junkConfig model =
-    case model.mouseDown of
+junkConfig state =
+    case state.mouseDown of
         Nothing ->
-            case model.hovered of
+            case state.hovered of
                 Nothing ->
                     Junk.default
 
@@ -222,7 +222,7 @@ junkConfig model =
                         )
 
         Just downPoint ->
-            case model.moved of
+            case state.moved of
                 Nothing ->
                     Junk.default
 
@@ -266,26 +266,26 @@ dotsConfig hovered =
 
 
 chartConfig : PlotState -> Config DataPoint PlotMsg
-chartConfig model =
-    { x = xAxisConfig model
-    , y = yAxisConfig model
+chartConfig state =
+    { x = xAxisConfig state
+    , y = yAxisConfig state
     , container = containerConfig
     , interpolation = Interpolation.default
     , intersection = Intersection.default
     , legends = Legends.default
-    , events = eventsConfig model
-    , junk = junkConfig model
+    , events = eventsConfig state
+    , junk = junkConfig state
     , grid = Grid.default
     , area = Area.default
     , line = Line.default
-    , dots = dotsConfig model.hovered
+    , dots = dotsConfig state.hovered
     }
 
 
 chart : PlotState -> Lines -> Html PlotMsg
-chart model lines =
+chart state lines =
     viewCustom
-        (chartConfig model)
+        (chartConfig state)
         lines
 
 
@@ -310,7 +310,8 @@ type alias PlotState =
     , plotWidth : Float
     , plotHeight : Float
     , id : Id
-    , nr : Plot
+    , nr : PlotNr
+    , movedSinceMouseDown : Int
     }
 
 
@@ -319,7 +320,7 @@ unZoomed =
     Range.padded 20 20
 
 
-plotInit : Id -> Plot -> PlotState
+plotInit : Id -> PlotNr -> PlotState
 plotInit plotId nr =
     { mouseDown = Nothing
     , rangeX = Nothing
@@ -332,6 +333,7 @@ plotInit plotId nr =
     , plotHeight = 0
     , id = plotId
     , nr = nr
+    , movedSinceMouseDown = 0
     }
 
 
@@ -357,17 +359,6 @@ getDims =
 ---- UPDATE ----
 
 
-rangeDiff : List DataPoint -> (DataPoint -> Float) -> Maybe Float
-rangeDiff points acc =
-    let
-        accessed =
-            List.map acc points
-    in
-        Maybe.map2 (-)
-            (List.maximum accessed)
-            (List.minimum accessed)
-
-
 type XY
     = X
     | Y
@@ -389,47 +380,18 @@ newRange state mouseUp xy =
                         Y ->
                             .y
 
-                range =
-                    case xy of
-                        X ->
-                            state.rangeX
-
-                        Y ->
-                            state.rangeY
-
                 zoomMin =
                     min (acc a) (acc b)
 
                 zoomMax =
                     max (acc a) (acc b)
-
-                zoomDiff =
-                    zoomMax - zoomMin
-
-                ratioThreshold =
-                    0.06
-
-                zoomAreaTooSmall =
-                    case range of
-                        Nothing ->
-                            case
-                                rangeDiff data1 acc
-                            of
-                                Just diff ->
-                                    diff * ratioThreshold > zoomDiff
-
-                                Nothing ->
-                                    True
-
-                        Just { min, max } ->
-                            (max - min) * ratioThreshold > zoomDiff
             in
-                if zoomAreaTooSmall then
-                    ( Nothing, unZoomed )
-                else
+                if state.movedSinceMouseDown > 2 then
                     ( Just <| Range zoomMin zoomMax
                     , Range.window zoomMin zoomMax
                     )
+                else
+                    ( Nothing, unZoomed )
 
         Nothing ->
             ( Nothing, unZoomed )
@@ -439,13 +401,13 @@ type alias Id =
     String
 
 
-type Plot
+type PlotNr
     = Plot1
     | Plot2
 
 
 type Msg
-    = Plot Plot PlotMsg
+    = Plot PlotNr PlotMsg
     | Resize Int Int
     | NewDims (Result Error (List Viewport))
 
@@ -524,16 +486,33 @@ plotUpdate msg state =
                     , rangeX = rx
                     , rangeY = ry
                     , mouseDown = Nothing
+                    , movedSinceMouseDown = 0
                 }
 
         Hover point ->
             { state | hovered = point }
 
         Move point ->
-            { state | moved = Just point }
+            case state.mouseDown of
+                Nothing ->
+                    { state | moved = Just point }
+
+                Just _ ->
+                    let
+                        oldCount =
+                            state.movedSinceMouseDown
+                    in
+                        { state
+                            | moved = Just point
+                            , movedSinceMouseDown = oldCount + 1
+                        }
 
         MouseLeave ->
-            { state | hovered = Nothing }
+            { state
+                | hovered = Nothing
+                , mouseDown = Nothing
+                , movedSinceMouseDown = 0
+            }
 
         Dims { viewport } ->
             { state
@@ -580,13 +559,13 @@ id2 =
     "plot2"
 
 
-plot : Plot -> PlotState -> String -> Lines -> Element Msg
-plot nr state str lines =
+plot : PlotNr -> PlotState -> Id -> Lines -> Element Msg
+plot nr state plotId lines =
     Element.map (\msg -> Plot nr msg)
         (el
             [ width fill
             , height fill
-            , id str
+            , id plotId
             ]
          <|
             html (chart state lines)
