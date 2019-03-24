@@ -234,16 +234,9 @@ junkConfig model =
                 Just movedPoint ->
                     Junk.custom
                         (\sys ->
-                            { below =
-                                [ dragBox
-                                    downPoint
-                                    movedPoint
-                                    sys
-                                ]
-                            , above =
-                                []
-                            , html =
-                                []
+                            { below = [ dragBox downPoint movedPoint sys ]
+                            , above = []
+                            , html = []
                             }
                         )
 
@@ -385,6 +378,12 @@ newRange model mouseUp xy =
                 zoomMax =
                     max (acc a) (acc b)
 
+                zoomDiff =
+                    zoomMax - zoomMin
+
+                ratioThreshold =
+                    0.06
+
                 rangeTooSmall =
                     case range of
                         Nothing ->
@@ -392,13 +391,13 @@ newRange model mouseUp xy =
                                 rangeDiff data1 acc
                             of
                                 Just diff ->
-                                    diff * 0.06 > zoomMax - zoomMin
+                                    diff * ratioThreshold > zoomDiff
 
                                 Nothing ->
                                     True
 
                         Just { min, max } ->
-                            (max - min) * 0.06 > zoomMax - zoomMin
+                            (max - min) * ratioThreshold > zoomDiff
             in
                 if rangeTooSmall then
                     ( Nothing, initRange )
