@@ -13,6 +13,7 @@
             "elm/svg": "1.0.1",
             "elm-community/typed-svg": "5.0.1",
             "erosson/number-suffix": "1.1.0",
+            "mdgriffith/elm-ui": "1.1.0",
             "terezka/line-charts": "2.0.0"
         },
         "indirect": {

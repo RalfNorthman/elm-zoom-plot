@@ -1,10 +1,14 @@
 module Main exposing (..)
 
 import Browser
+import Browser.Events
+import Browser.Dom exposing (Viewport, Error, getViewportOf)
+import Task
 import NumberSuffix exposing (scientificConfig)
 import FormatNumber.Locales exposing (frenchLocale)
-import Html exposing (Html, text, div, h1, img)
-import Html.Attributes exposing (src, style)
+import Html exposing (Html)
+import Html.Attributes
+import Element exposing (..)
 import LineChart exposing (..)
 import LineChart.Area as Area
 import LineChart.Axis as Axis
@@ -25,8 +29,8 @@ import LineChart.Axis.Range as Range
 import LineChart.Axis.Ticks as Ticks
 import LineChart.Axis.Tick as Tick
 import Svg exposing (Svg)
-import TypedSvg.Attributes exposing (fill, stroke, strokeDasharray)
-import TypedSvg.Attributes.InPx exposing (strokeWidth, fontSize)
+import TypedSvg.Attributes as SvgAttr
+import TypedSvg.Attributes.InPx as SvgAttrPx
 import TypedSvg.Types exposing (Fill(..))
 
 
@@ -77,16 +81,6 @@ data5 =
         (\x -> 0.03 * x ^ 2 - 0.5 * x - 3.5 + 5 * sin (3 * x))
 
 
-lines : List (Series DataPoint)
-lines =
-    [ LineChart.line Colors.blueLight Dots.triangle "exp" data1
-    , LineChart.line Colors.tealLight Dots.circle "cos" data2
-    , LineChart.line Colors.greenLight Dots.square "poly" data3
-    , LineChart.line Colors.goldLight Dots.diamond "polysin" data4
-    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" data5
-    ]
-
-
 format : Float -> String
 format number =
     NumberSuffix.format
@@ -118,7 +112,7 @@ xAxisConfig model =
     Axis.custom
         { title = Title.default "x"
         , variable = Just << .x
-        , pixels = 800
+        , pixels = round model.plotWidth
         , range = model.xConfig
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = ticksConfig
@@ -130,7 +124,7 @@ yAxisConfig model =
     Axis.custom
         { title = Title.default "y"
         , variable = Just << .y
-        , pixels = 380
+        , pixels = round model.plotHeight
         , range = model.yConfig
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = ticksConfig
@@ -163,20 +157,20 @@ containerConfig : Container.Config msg
 containerConfig =
     Container.custom
         { attributesHtml = []
-        , attributesSvg = [ fontSize 10 ]
+        , attributesSvg = [ SvgAttrPx.fontSize 10 ]
         , size = Container.relative
         , margin = Container.Margin 40 110 50 70
-        , id = "line-chart-1"
+        , id = "whatever"
         }
 
 
 dragBox : DataPoint -> DataPoint -> Coordinate.System -> Svg msg
 dragBox a b system =
     Junk.rectangle system
-        [ fill <| Fill Colors.grayLightest
-        , stroke Colors.grayLight
-        , strokeWidth 1
-        , strokeDasharray "3 3"
+        [ SvgAttr.fill <| Fill Colors.grayLightest
+        , SvgAttr.stroke Colors.grayLight
+        , SvgAttrPx.strokeWidth 1
+        , SvgAttr.strokeDasharray "3 3"
         ]
         (min a.x b.x)
         (max a.x b.x)
@@ -287,8 +281,8 @@ chartConfig model =
     }
 
 
-chart : Model -> Html Msg
-chart model =
+chart : Model -> Lines -> Html Msg
+chart model lines =
     viewCustom
         (chartConfig model)
         lines
@@ -306,11 +300,13 @@ type alias Model =
     , yConfig : Range.Config
     , hovered : Maybe DataPoint
     , moved : Maybe DataPoint
+    , plotWidth : Float
+    , plotHeight : Float
     }
 
 
-initRange : Range.Config
-initRange =
+unZoomed : Range.Config
+unZoomed =
     Range.padded 20 20
 
 
@@ -319,12 +315,14 @@ init =
     ( { mouseDown = Nothing
       , rangeX = Nothing
       , rangeY = Nothing
-      , xConfig = initRange
-      , yConfig = initRange
+      , xConfig = unZoomed
+      , yConfig = unZoomed
       , hovered = Nothing
       , moved = Nothing
+      , plotWidth = 0
+      , plotHeight = 0
       }
-    , Cmd.none
+    , attemptGetDims
     )
 
 
@@ -384,7 +382,7 @@ newRange model mouseUp xy =
                 ratioThreshold =
                     0.06
 
-                rangeTooSmall =
+                zoomAreaTooSmall =
                     case range of
                         Nothing ->
                             case
@@ -399,15 +397,15 @@ newRange model mouseUp xy =
                         Just { min, max } ->
                             (max - min) * ratioThreshold > zoomDiff
             in
-                if rangeTooSmall then
-                    ( Nothing, initRange )
+                if zoomAreaTooSmall then
+                    ( Nothing, unZoomed )
                 else
                     ( Just <| Range zoomMin zoomMax
                     , Range.window zoomMin zoomMax
                     )
 
         Nothing ->
-            ( Nothing, initRange )
+            ( Nothing, unZoomed )
 
 
 type Msg
@@ -416,6 +414,13 @@ type Msg
     | Hover (Maybe DataPoint)
     | Move DataPoint
     | MouseLeave
+    | Resize Int Int
+    | NewDims (Result Error Viewport)
+
+
+attemptGetDims : Cmd Msg
+attemptGetDims =
+    Task.attempt NewDims <| getViewportOf id1
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -457,14 +462,102 @@ update msg model =
         MouseLeave ->
             ( { model | hovered = Nothing }, Cmd.none )
 
+        Resize _ _ ->
+            ( model, attemptGetDims )
+
+        NewDims result ->
+            case result of
+                Ok { viewport } ->
+                    ( { model
+                        | plotWidth = viewport.width
+                        , plotHeight = viewport.height
+                      }
+                    , Cmd.none
+                    )
+
+                Err _ ->
+                    ( { model
+                        | plotWidth = 1
+                        , plotHeight = 1
+                      }
+                    , Cmd.none
+                    )
+
 
 
 ---- VIEW ----
 
 
+type alias Lines =
+    List (Series DataPoint)
+
+
+lines1 : Lines
+lines1 =
+    [ LineChart.line Colors.blueLight Dots.triangle "exp" data1
+    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" data5
+    ]
+
+
+lines2 : Lines
+lines2 =
+    [ LineChart.line Colors.tealLight Dots.circle "cos" data2
+    , LineChart.line Colors.greenLight Dots.square "poly" data3
+    , LineChart.line Colors.goldLight Dots.diamond "polysin" data4
+    ]
+
+
+id : String -> Attribute msg
+id str =
+    htmlAttribute <| Html.Attributes.id str
+
+
+id1 : String
+id1 =
+    "plot1"
+
+
+id2 : String
+id2 =
+    "plot2"
+
+
+plot : Model -> String -> Lines -> Element Msg
+plot model str lines =
+    el
+        [ width fill
+        , height fill
+        , id str
+        ]
+    <|
+        html (chart model lines)
+
+
 view : Model -> Html Msg
 view model =
-    chart model
+    Element.layout
+        [ width fill
+        , height fill
+        , padding 5
+        ]
+    <|
+        row
+            [ width fill
+            , height fill
+            , padding 5
+            ]
+            [ plot model id1 lines1
+            , plot model id2 lines2
+            ]
+
+
+
+---- SUBSCRIPTIONS ----
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Browser.Events.onResize Resize
 
 
 
@@ -477,5 +570,5 @@ main =
         { view = view
         , init = \_ -> init
         , update = update
-        , subscriptions = always Sub.none
+        , subscriptions = subscriptions
         }
