@@ -296,6 +296,7 @@ chart state lines =
 type alias Model =
     { plot1 : PlotState
     , plot2 : PlotState
+    , plot3 : PlotState
     }
 
 
@@ -321,7 +322,7 @@ unZoomed =
 
 
 plotInit : Id -> PlotNr -> PlotState
-plotInit plotId nr =
+plotInit str nr =
     { mouseDown = Nothing
     , rangeX = Nothing
     , rangeY = Nothing
@@ -331,7 +332,7 @@ plotInit plotId nr =
     , moved = Nothing
     , plotWidth = 0
     , plotHeight = 0
-    , id = plotId
+    , id = str
     , nr = nr
     , movedSinceMouseDown = 0
     }
@@ -341,6 +342,7 @@ init : ( Model, Cmd Msg )
 init =
     ( { plot1 = plotInit id1 Plot1
       , plot2 = plotInit id2 Plot2
+      , plot3 = plotInit id3 Plot3
       }
     , getDims
     )
@@ -351,6 +353,7 @@ getDims =
     Task.sequence
         [ taskGetDims id1
         , taskGetDims id2
+        , taskGetDims id3
         ]
         |> Task.attempt NewDims
 
@@ -404,10 +407,11 @@ type alias Id =
 type PlotNr
     = Plot1
     | Plot2
+    | Plot3
 
 
 type Msg
-    = Plot PlotNr PlotMsg
+    = ToPlot PlotNr PlotMsg
     | Resize Int Int
     | NewDims (Result Error (List Viewport))
 
@@ -422,20 +426,25 @@ type PlotMsg
 
 
 taskGetDims : Id -> Task Error Viewport
-taskGetDims plotId =
-    getViewportOf plotId
+taskGetDims str =
+    getViewportOf str
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Plot Plot1 plotMsg ->
+        ToPlot Plot1 plotMsg ->
             ( { model | plot1 = plotUpdate plotMsg model.plot1 }
             , Cmd.none
             )
 
-        Plot Plot2 plotMsg ->
+        ToPlot Plot2 plotMsg ->
             ( { model | plot2 = plotUpdate plotMsg model.plot2 }
+            , Cmd.none
+            )
+
+        ToPlot Plot3 plotMsg ->
+            ( { model | plot3 = plotUpdate plotMsg model.plot3 }
             , Cmd.none
             )
 
@@ -444,7 +453,7 @@ update msg model =
 
         NewDims result ->
             case result of
-                Ok [ dims1, dims2 ] ->
+                Ok [ dims1, dims2, dims3 ] ->
                     ( { model
                         | plot1 =
                             plotUpdate
@@ -454,6 +463,10 @@ update msg model =
                             plotUpdate
                                 (Dims dims2)
                                 model.plot2
+                        , plot3 =
+                            plotUpdate
+                                (Dims dims3)
+                                model.plot3
                       }
                     , Cmd.none
                     )
@@ -516,8 +529,8 @@ plotUpdate msg state =
 
         Dims { viewport } ->
             { state
-                | plotWidth = viewport.width
-                , plotHeight = viewport.height
+                | plotWidth = viewport.width * 0.9
+                , plotHeight = viewport.height * 0.9
             }
 
 
@@ -544,6 +557,14 @@ lines2 =
     ]
 
 
+lines3 : Lines
+lines3 =
+    [ LineChart.line Colors.tealLight Dots.circle "cos" data2
+    , LineChart.line Colors.goldLight Dots.diamond "polysin" data4
+    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" data5
+    ]
+
+
 id : String -> Attribute msg
 id str =
     htmlAttribute <| Html.Attributes.id str
@@ -559,13 +580,18 @@ id2 =
     "plot2"
 
 
+id3 : String
+id3 =
+    "plot3"
+
+
 plot : PlotNr -> PlotState -> Id -> Lines -> Element Msg
-plot nr state plotId lines =
-    Element.map (\msg -> Plot nr msg)
+plot nr state str lines =
+    Element.map (\msg -> ToPlot nr msg)
         (el
             [ width fill
             , height fill
-            , id plotId
+            , id str
             ]
          <|
             html (chart state lines)
@@ -580,13 +606,14 @@ view model =
         , padding 10
         ]
     <|
-        row
+        column
             [ width fill
             , height fill
             , padding 5
             ]
             [ plot Plot1 model.plot1 id1 lines1
             , plot Plot2 model.plot2 id2 lines2
+            , plot Plot3 model.plot3 id3 lines3
             ]
 
 
