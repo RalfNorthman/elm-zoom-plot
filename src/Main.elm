@@ -3,7 +3,7 @@ module Main exposing (..)
 import Color exposing (toRgba)
 import Browser
 import Browser.Events
-import Browser.Dom exposing (Viewport, Error, getViewportOf)
+import Browser.Dom exposing (Viewport, Error, getViewport)
 import Task exposing (Task)
 import Debug
 import NumberSuffix exposing (scientificConfig)
@@ -131,7 +131,7 @@ yAxisConfig state height =
         , pixels = round height
         , range = state.yConfig
         , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = ticksConfig
+        , ticks = Ticks.floatCustom 4 customTick
         }
 
 
@@ -163,7 +163,12 @@ containerConfig =
         { attributesHtml = []
         , attributesSvg = [ SvgAttrPx.fontSize 10 ]
         , size = Container.relative
-        , margin = Container.Margin 40 110 50 70
+        , margin =
+            { top = 30
+            , right = 110
+            , bottom = 30
+            , left = 50
+            }
         , id = "whatever"
         }
 
@@ -345,7 +350,7 @@ init =
       , plotWidth = 0
       , plotHeight = 0
       }
-    , getDims
+    , getBrowserSize
     )
 
 
@@ -404,7 +409,7 @@ type PlotNr
 type Msg
     = ToPlot PlotNr PlotMsg
     | Resize Int Int
-    | NewDims (Result Error Viewport)
+    | NewBrowserSize (Result Error Viewport)
 
 
 type PlotMsg
@@ -415,15 +420,10 @@ type PlotMsg
     | MouseLeave
 
 
-taskGetDims : Id -> Task Error Viewport
-taskGetDims str =
-    getViewportOf str
-
-
-getDims : Cmd Msg
-getDims =
-    taskGetDims "plotColumn1"
-        |> Task.attempt NewDims
+getBrowserSize : Cmd Msg
+getBrowserSize =
+    getViewport
+        |> Task.attempt NewBrowserSize
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -444,21 +444,36 @@ update msg model =
             , Cmd.none
             )
 
-        Resize _ _ ->
-            ( model, getDims )
+        Resize width height ->
+            ( updatePlotDimensions model (toFloat width) (toFloat height)
+            , Cmd.none
+            )
 
-        NewDims result ->
+        NewBrowserSize result ->
             case result of
                 Ok { viewport } ->
-                    ( { model
-                        | plotWidth = viewport.width
-                        , plotHeight = viewport.height / 3
-                      }
+                    ( updatePlotDimensions
+                        model
+                        viewport.width
+                        viewport.height
                     , Cmd.none
                     )
 
                 _ ->
                     ( model, Cmd.none )
+
+
+updatePlotDimensions : Model -> Float -> Float -> Model
+updatePlotDimensions model width height =
+    let
+        realEstate : Float -> Float
+        realEstate dim =
+            dim - thingSize - 2 * layoutPadding
+    in
+        { model
+            | plotWidth = realEstate width
+            , plotHeight = realEstate height / 3 - 5
+        }
 
 
 plotUpdate : PlotMsg -> PlotState -> PlotState
@@ -597,8 +612,8 @@ col color =
 thing : Element Msg
 thing =
     el
-        [ width <| px 150
-        , height <| px 150
+        [ width <| px thingSize
+        , height <| px thingSize
         , Background.color <| col Colors.grayLightest
         , Border.rounded 20
         , Border.width 1
@@ -616,23 +631,29 @@ invisibleThing =
         none
 
 
+thingSize =
+    150
+
+
+layoutPadding =
+    10
+
+
 view : Model -> Html Msg
 view model =
     Element.layout
         [ width fill
         , height fill
-        , padding 10
+        , padding layoutPadding
         ]
     <|
         row
             [ width fill
             , height fill
-            , padding 5
             ]
             [ column
                 [ width fill
                 , height fill
-                , padding 5
                 ]
                 [ el [ centerX ] thing
                 , column
@@ -646,9 +667,7 @@ view model =
                     ]
                 ]
             , column
-                [ padding 5
-                , height fill
-                ]
+                [ height fill ]
                 [ el [ alignTop ] invisibleThing
                 , el [ centerY ] thing
                 ]
