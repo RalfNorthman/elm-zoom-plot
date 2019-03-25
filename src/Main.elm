@@ -111,24 +111,24 @@ eventsConfig state =
         ]
 
 
-xAxisConfig : PlotState -> Axis.Config DataPoint msg
-xAxisConfig state =
+xAxisConfig : PlotState -> Float -> Axis.Config DataPoint msg
+xAxisConfig state width =
     Axis.custom
         { title = Title.default "x"
         , variable = Just << .x
-        , pixels = round state.plotWidth
+        , pixels = round width
         , range = state.xConfig
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = ticksConfig
         }
 
 
-yAxisConfig : PlotState -> Axis.Config DataPoint msg
-yAxisConfig state =
+yAxisConfig : PlotState -> Float -> Axis.Config DataPoint msg
+yAxisConfig state height =
     Axis.custom
         { title = Title.default "y"
         , variable = Just << .y
-        , pixels = round state.plotHeight
+        , pixels = round height
         , range = state.yConfig
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = ticksConfig
@@ -268,10 +268,10 @@ dotsConfig hovered =
             }
 
 
-chartConfig : PlotState -> Config DataPoint PlotMsg
-chartConfig state =
-    { x = xAxisConfig state
-    , y = yAxisConfig state
+chartConfig : PlotState -> Float -> Float -> Config DataPoint PlotMsg
+chartConfig state width height =
+    { x = xAxisConfig state width
+    , y = yAxisConfig state height
     , container = containerConfig
     , interpolation = Interpolation.default
     , intersection = Intersection.default
@@ -285,10 +285,10 @@ chartConfig state =
     }
 
 
-chart : PlotState -> Lines -> Html PlotMsg
-chart state lines =
+chart : PlotState -> Float -> Float -> Lines -> Html PlotMsg
+chart state width height lines =
     viewCustom
-        (chartConfig state)
+        (chartConfig state width height)
         lines
 
 
@@ -300,6 +300,8 @@ type alias Model =
     { plot1 : PlotState
     , plot2 : PlotState
     , plot3 : PlotState
+    , plotWidth : Float
+    , plotHeight : Float
     }
 
 
@@ -311,9 +313,6 @@ type alias PlotState =
     , yConfig : Range.Config
     , hovered : Maybe DataPoint
     , moved : Maybe DataPoint
-    , plotWidth : Float
-    , plotHeight : Float
-    , id : Id
     , nr : PlotNr
     , movedSinceMouseDown : Int
     }
@@ -324,8 +323,8 @@ unZoomed =
     Range.padded 20 20
 
 
-plotInit : Id -> PlotNr -> PlotState
-plotInit str nr =
+plotInit : PlotNr -> PlotState
+plotInit nr =
     { mouseDown = Nothing
     , rangeX = Nothing
     , rangeY = Nothing
@@ -333,9 +332,6 @@ plotInit str nr =
     , yConfig = unZoomed
     , hovered = Nothing
     , moved = Nothing
-    , plotWidth = 0
-    , plotHeight = 0
-    , id = str
     , nr = nr
     , movedSinceMouseDown = 0
     }
@@ -343,22 +339,14 @@ plotInit str nr =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { plot1 = plotInit id1 Plot1
-      , plot2 = plotInit id2 Plot2
-      , plot3 = plotInit id3 Plot3
+    ( { plot1 = plotInit Plot1
+      , plot2 = plotInit Plot2
+      , plot3 = plotInit Plot3
+      , plotWidth = 0
+      , plotHeight = 0
       }
     , getDims
     )
-
-
-getDims : Cmd Msg
-getDims =
-    Task.sequence
-        [ taskGetDims id1
-        , taskGetDims id2
-        , taskGetDims id3
-        ]
-        |> Task.attempt NewDims
 
 
 
@@ -416,7 +404,7 @@ type PlotNr
 type Msg
     = ToPlot PlotNr PlotMsg
     | Resize Int Int
-    | NewDims (Result Error (List Viewport))
+    | NewDims (Result Error Viewport)
 
 
 type PlotMsg
@@ -425,12 +413,17 @@ type PlotMsg
     | Hover (Maybe DataPoint)
     | Move DataPoint
     | MouseLeave
-    | Dims Viewport
 
 
 taskGetDims : Id -> Task Error Viewport
 taskGetDims str =
     getViewportOf str
+
+
+getDims : Cmd Msg
+getDims =
+    taskGetDims "plotColumn1"
+        |> Task.attempt NewDims
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -456,20 +449,10 @@ update msg model =
 
         NewDims result ->
             case result of
-                Ok [ dims1, dims2, dims3 ] ->
+                Ok { viewport } ->
                     ( { model
-                        | plot1 =
-                            plotUpdate
-                                (Dims dims1)
-                                model.plot1
-                        , plot2 =
-                            plotUpdate
-                                (Dims dims2)
-                                model.plot2
-                        , plot3 =
-                            plotUpdate
-                                (Dims dims3)
-                                model.plot3
+                        | plotWidth = viewport.width
+                        , plotHeight = viewport.height / 3
                       }
                     , Cmd.none
                     )
@@ -530,12 +513,6 @@ plotUpdate msg state =
                 , movedSinceMouseDown = 0
             }
 
-        Dims { viewport } ->
-            { state
-                | plotWidth = viewport.width * 0.9
-                , plotHeight = viewport.height * 0.9
-            }
-
 
 
 ---- VIEW ----
@@ -573,34 +550,46 @@ id str =
     htmlAttribute <| Html.Attributes.id str
 
 
-id1 : String
-id1 =
-    "plot1"
+type alias Plot =
+    { nr : PlotNr
+    , acc : Model -> PlotState
+    , lines : Lines
+    }
 
 
-id2 : String
-id2 =
-    "plot2"
+plot1 : Plot
+plot1 =
+    Plot Plot1 .plot1 lines1
 
 
-id3 : String
-id3 =
-    "plot3"
+plot2 : Plot
+plot2 =
+    Plot Plot2 .plot2 lines2
 
 
-plot : PlotNr -> PlotState -> Id -> Lines -> Element Msg
-plot nr state str lines =
-    Element.map (\msg -> ToPlot nr msg)
+plot3 : Plot
+plot3 =
+    Plot Plot3 .plot3 lines3
+
+
+draw : Model -> Plot -> Element Msg
+draw model plot =
+    Element.map (\msg -> ToPlot plot.nr msg)
         (el
             [ width fill
             , height fill
-            , id str
             ]
          <|
-            html (chart state lines)
+            html
+                (chart (plot.acc model)
+                    model.plotWidth
+                    model.plotHeight
+                    plot.lines
+                )
         )
 
 
+col : Color.Color -> Element.Color
 col color =
     fromRgb (toRgba color)
 
@@ -649,10 +638,11 @@ view model =
                 , column
                     [ width fill
                     , height fill
+                    , id "plotColumn1"
                     ]
-                    [ plot Plot1 model.plot1 id1 lines1
-                    , plot Plot2 model.plot2 id2 lines2
-                    , plot Plot3 model.plot3 id3 lines3
+                    [ draw model plot1
+                    , draw model plot2
+                    , draw model plot3
                     ]
                 ]
             , column
