@@ -1,5 +1,6 @@
 module Main exposing (..)
 
+import Color exposing (toRgba)
 import Browser
 import Browser.Events
 import Browser.Dom exposing (Viewport, Error, getViewportOf)
@@ -10,6 +11,8 @@ import FormatNumber.Locales exposing (frenchLocale)
 import Html exposing (Html)
 import Html.Attributes
 import Element exposing (..)
+import Element.Background as Background
+import Element.Border as Border
 import LineChart exposing (..)
 import LineChart.Area as Area
 import LineChart.Axis as Axis
@@ -598,6 +601,32 @@ plot nr state str lines =
         )
 
 
+col color =
+    fromRgb (toRgba color)
+
+
+thing : Element Msg
+thing =
+    el
+        [ width <| px 150
+        , height <| px 150
+        , Background.color <| col Colors.grayLightest
+        , Border.rounded 20
+        , Border.width 1
+        , Border.color <| col Colors.grayLight
+        ]
+        none
+
+
+invisibleThing : Element Msg
+invisibleThing =
+    el
+        [ width <| px 150
+        , height <| px 150
+        ]
+        none
+
+
 view : Model -> Html Msg
 view model =
     Element.layout
@@ -606,14 +635,33 @@ view model =
         , padding 10
         ]
     <|
-        column
+        row
             [ width fill
             , height fill
             , padding 5
             ]
-            [ plot Plot1 model.plot1 id1 lines1
-            , plot Plot2 model.plot2 id2 lines2
-            , plot Plot3 model.plot3 id3 lines3
+            [ column
+                [ width fill
+                , height fill
+                , padding 5
+                ]
+                [ el [ centerX ] thing
+                , column
+                    [ width fill
+                    , height fill
+                    ]
+                    [ plot Plot1 model.plot1 id1 lines1
+                    , plot Plot2 model.plot2 id2 lines2
+                    , plot Plot3 model.plot3 id3 lines3
+                    ]
+                ]
+            , column
+                [ padding 5
+                , height fill
+                ]
+                [ el [ alignTop ] invisibleThing
+                , el [ centerY ] thing
+                ]
             ]
 
 
