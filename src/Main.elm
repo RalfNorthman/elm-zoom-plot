@@ -48,7 +48,7 @@ type alias Foobar =
     }
 
 
-type alias DataPoint =
+type alias Point =
     { x : Float, y : Float }
 
 
@@ -102,7 +102,7 @@ format number =
 ---- CHART ----
 
 
-eventsConfig : PlotState -> Events.Config DataPoint PlotMsg
+eventsConfig : PlotState -> Events.Config Point PlotMsg
 eventsConfig state =
     Events.custom
         [ Events.onMouseDown MouseDown Events.getData
@@ -117,7 +117,7 @@ eventsConfig state =
         ]
 
 
-xAxisConfig : PlotState -> Float -> Axis.Config DataPoint msg
+xAxisConfig : PlotState -> Float -> Axis.Config Point msg
 xAxisConfig state width =
     Axis.custom
         { title = Title.default "x"
@@ -129,7 +129,7 @@ xAxisConfig state width =
         }
 
 
-yAxisConfig : PlotState -> Float -> Axis.Config DataPoint msg
+yAxisConfig : PlotState -> Float -> Axis.Config Point msg
 yAxisConfig state height =
     Axis.custom
         { title = Title.default "y"
@@ -179,7 +179,7 @@ containerConfig =
         }
 
 
-dragBox : DataPoint -> DataPoint -> Coordinate.System -> Svg msg
+dragBox : Point -> Point -> Coordinate.System -> Svg msg
 dragBox a b system =
     Junk.rectangle system
         [ SvgAttr.fill <| Fill Colors.grayLightest
@@ -193,7 +193,7 @@ dragBox a b system =
         (max a.y b.y)
 
 
-hoverJunk : DataPoint -> Coordinate.System -> List (Svg msg)
+hoverJunk : Point -> Coordinate.System -> List (Svg msg)
 hoverJunk hovered system =
     let
         textX =
@@ -218,7 +218,7 @@ hoverJunk hovered system =
         ]
 
 
-junkConfig : PlotState -> Junk.Config DataPoint msg
+junkConfig : PlotState -> Junk.Config Point msg
 junkConfig state =
     case state.mouseDown of
         Nothing ->
@@ -250,7 +250,7 @@ junkConfig state =
                         )
 
 
-dotsConfig : Maybe DataPoint -> Dots.Config DataPoint
+dotsConfig : Maybe Point -> Dots.Config Point
 dotsConfig hovered =
     let
         noDot =
@@ -279,7 +279,7 @@ dotsConfig hovered =
             }
 
 
-chartConfig : PlotState -> Float -> Float -> Config DataPoint PlotMsg
+chartConfig : PlotState -> Float -> Float -> Config Point PlotMsg
 chartConfig state width height =
     { x = xAxisConfig state width
     , y = yAxisConfig state height
@@ -317,13 +317,13 @@ type alias Model =
 
 
 type alias PlotState =
-    { mouseDown : Maybe DataPoint
+    { mouseDown : Maybe Point
     , rangeX : Maybe Range
     , rangeY : Maybe Range
     , xAxisConfig : Range.Config
     , yAxisConfig : Range.Config
-    , hovered : Maybe DataPoint
-    , moved : Maybe DataPoint
+    , hovered : Maybe Point
+    , moved : Maybe Point
     , nr : PlotNr
     , movedSinceMouseDown : Int
     }
@@ -369,7 +369,7 @@ type XY
     | Y
 
 
-newRange : PlotState -> DataPoint -> XY -> ( Maybe Range, Range.Config )
+newRange : PlotState -> Point -> XY -> ( Maybe Range, Range.Config )
 newRange state mouseUp xy =
     case state.mouseDown of
         Just a ->
@@ -419,10 +419,10 @@ type Msg
 
 
 type PlotMsg
-    = MouseDown DataPoint
-    | MouseUp DataPoint
-    | Hover (Maybe DataPoint)
-    | Move DataPoint
+    = MouseDown Point
+    | MouseUp Point
+    | Hover (Maybe Point)
+    | Move Point
     | MouseLeave
 
 
@@ -540,38 +540,38 @@ plotUpdate msg state =
 
 
 type alias Lines =
-    List (Series DataPoint)
+    List (Series Point)
 
 
-toDataPoints : (data -> Float) -> (data -> Float) -> List data -> List DataPoint
-toDataPoints xAcc yAcc records =
+toPoints : (data -> Float) -> (data -> Float) -> List data -> List Point
+toPoints xAcc yAcc records =
     let
         constructor =
-            (\record -> DataPoint (xAcc record) (yAcc record))
+            (\record -> Point (xAcc record) (yAcc record))
     in
         List.map constructor records
 
 
 lines1 : Lines
 lines1 =
-    [ LineChart.line Colors.blueLight Dots.triangle "exp" (toDataPoints .foo .bar data1)
-    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" (toDataPoints .foo .bar data5)
+    [ LineChart.line Colors.blueLight Dots.triangle "exp" (toPoints .foo .bar data1)
+    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" (toPoints .foo .bar data5)
     ]
 
 
 lines2 : Lines
 lines2 =
-    [ LineChart.line Colors.tealLight Dots.circle "cos" (toDataPoints .foo .bar data2)
-    , LineChart.line Colors.greenLight Dots.square "poly" (toDataPoints .foo .bar data3)
-    , LineChart.line Colors.goldLight Dots.diamond "polysin" (toDataPoints .foo .bar data4)
+    [ LineChart.line Colors.tealLight Dots.circle "cos" (toPoints .foo .bar data2)
+    , LineChart.line Colors.greenLight Dots.square "poly" (toPoints .foo .bar data3)
+    , LineChart.line Colors.goldLight Dots.diamond "polysin" (toPoints .foo .bar data4)
     ]
 
 
 lines3 : Lines
 lines3 =
-    [ LineChart.line Colors.tealLight Dots.circle "cos" (toDataPoints .foo .bar data2)
-    , LineChart.line Colors.goldLight Dots.diamond "polysin" (toDataPoints .foo .bar data4)
-    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" (toDataPoints .foo .bar data5)
+    [ LineChart.line Colors.tealLight Dots.circle "cos" (toPoints .foo .bar data2)
+    , LineChart.line Colors.goldLight Dots.diamond "polysin" (toPoints .foo .bar data4)
+    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" (toPoints .foo .bar data5)
     ]
 
 
