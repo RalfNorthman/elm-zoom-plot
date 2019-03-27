@@ -41,11 +41,18 @@ import TypedSvg.Types exposing (Fill(..))
 ---- TEST-DATA ----
 
 
+type alias Foobar =
+    { foo : Float
+    , bar : Float
+    , baz : String
+    }
+
+
 type alias DataPoint =
     { x : Float, y : Float }
 
 
-makeData : (Float -> Float) -> List DataPoint
+makeData : (Float -> Float) -> List Foobar
 makeData func =
     let
         xs : List Float
@@ -55,31 +62,30 @@ makeData func =
             <|
                 List.range -221 65
     in
-        List.map2 DataPoint xs <|
-            List.map func xs
+        List.map (\x -> Foobar x (func x) "foobar") xs
 
 
-data1 : List DataPoint
+data1 : List Foobar
 data1 =
     makeData (\x -> 0.01 ^ (0.04 * x) + 3.5 * (sin (2 * x)))
 
 
-data2 : List DataPoint
+data2 : List Foobar
 data2 =
     makeData cos
 
 
-data3 : List DataPoint
+data3 : List Foobar
 data3 =
     makeData (\x -> 0.01 * x * x - 0.1 * x - 0.5)
 
 
-data4 : List DataPoint
+data4 : List Foobar
 data4 =
     makeData (\x -> 0.01 * x ^ 2 - 0.1 * x - 0.5 + sin x)
 
 
-data5 : List DataPoint
+data5 : List Foobar
 data5 =
     makeData
         (\x -> 0.03 * x ^ 2 - 0.5 * x - 3.5 + 5 * sin (3 * x))
@@ -537,26 +543,35 @@ type alias Lines =
     List (Series DataPoint)
 
 
+toDataPoints : (data -> Float) -> (data -> Float) -> List data -> List DataPoint
+toDataPoints xAcc yAcc records =
+    let
+        constructor =
+            (\record -> DataPoint (xAcc record) (yAcc record))
+    in
+        List.map constructor records
+
+
 lines1 : Lines
 lines1 =
-    [ LineChart.line Colors.blueLight Dots.triangle "exp" data1
-    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" data5
+    [ LineChart.line Colors.blueLight Dots.triangle "exp" (toDataPoints .foo .bar data1)
+    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" (toDataPoints .foo .bar data5)
     ]
 
 
 lines2 : Lines
 lines2 =
-    [ LineChart.line Colors.tealLight Dots.circle "cos" data2
-    , LineChart.line Colors.greenLight Dots.square "poly" data3
-    , LineChart.line Colors.goldLight Dots.diamond "polysin" data4
+    [ LineChart.line Colors.tealLight Dots.circle "cos" (toDataPoints .foo .bar data2)
+    , LineChart.line Colors.greenLight Dots.square "poly" (toDataPoints .foo .bar data3)
+    , LineChart.line Colors.goldLight Dots.diamond "polysin" (toDataPoints .foo .bar data4)
     ]
 
 
 lines3 : Lines
 lines3 =
-    [ LineChart.line Colors.tealLight Dots.circle "cos" data2
-    , LineChart.line Colors.goldLight Dots.diamond "polysin" data4
-    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" data5
+    [ LineChart.line Colors.tealLight Dots.circle "cos" (toDataPoints .foo .bar data2)
+    , LineChart.line Colors.goldLight Dots.diamond "polysin" (toDataPoints .foo .bar data4)
+    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" (toDataPoints .foo .bar data5)
     ]
 
 
@@ -567,24 +582,26 @@ id str =
 
 type alias Plot =
     { nr : PlotNr
-    , acc : Model -> PlotState
+    , plotState : PlotState
     , lines : Lines
+    , width : Float
+    , height : Float
     }
 
 
-plot1 : Plot
-plot1 =
-    Plot Plot1 .plot1 lines1
+plot1 : Model -> Plot
+plot1 model =
+    Plot Plot1 model.plot1 lines1 model.plotWidth model.plotHeight
 
 
-plot2 : Plot
-plot2 =
-    Plot Plot2 .plot2 lines2
+plot2 : Model -> Plot
+plot2 model =
+    Plot Plot2 model.plot2 lines2 model.plotWidth model.plotHeight
 
 
-plot3 : Plot
-plot3 =
-    Plot Plot3 .plot3 lines3
+plot3 : Model -> Plot
+plot3 model =
+    Plot Plot3 model.plot3 lines3 model.plotWidth model.plotHeight
 
 
 draw : Model -> Plot -> Element Msg
@@ -596,9 +613,10 @@ draw model plot =
             ]
          <|
             html
-                (chart (plot.acc model)
-                    model.plotWidth
-                    model.plotHeight
+                (chart
+                    plot.plotState
+                    plot.width
+                    plot.height
                     plot.lines
                 )
         )
@@ -661,9 +679,9 @@ view model =
                     , height fill
                     , id "plotColumn1"
                     ]
-                    [ draw model plot1
-                    , draw model plot2
-                    , draw model plot3
+                    [ draw model <| plot1 model
+                    , draw model <| plot2 model
+                    , draw model <| plot3 model
                     ]
                 ]
             , column
