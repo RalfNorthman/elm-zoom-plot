@@ -380,29 +380,3 @@ plotUpdate msg state =
                 , mouseDown = Nothing
                 , movedSinceMouseDown = 0
             }
-
-
-type alias PlotConfig =
-    { plotState : PlotState
-    , lines : Lines
-    , width : Float
-    , height : Float
-    }
-
-
-draw : Model -> PlotConfig -> (PlotMsg -> msg) -> Element msg
-draw model plot toMsg =
-    Element.map toMsg
-        (el
-            [ width fill
-            , height fill
-            ]
-         <|
-            html
-                (chart
-                    plot.plotState
-                    plot.width
-                    plot.height
-                    plot.lines
-                )
-        )
