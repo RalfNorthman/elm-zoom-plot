@@ -1,41 +1,20 @@
 module Main exposing (..)
 
+import Plot exposing (..)
 import Color exposing (toRgba)
 import Browser
 import Browser.Events
 import Browser.Dom exposing (Viewport, Error, getViewport)
 import Task exposing (Task)
 import Debug
-import NumberSuffix exposing (scientificConfig)
-import FormatNumber.Locales exposing (frenchLocale)
 import Html exposing (Html)
 import Html.Attributes
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
-import LineChart exposing (..)
-import LineChart.Area as Area
-import LineChart.Axis as Axis
-import LineChart.Axis.Intersection as Intersection
-import LineChart.Axis.Line as AxisLine
 import LineChart.Colors as Colors
-import LineChart.Container as Container
 import LineChart.Dots as Dots
-import LineChart.Events as Events
-import LineChart.Grid as Grid
-import LineChart.Interpolation as Interpolation
-import LineChart.Junk as Junk
-import LineChart.Legends as Legends
-import LineChart.Line as Line
-import LineChart.Coordinate as Coordinate exposing (Range)
-import LineChart.Axis.Title as Title
-import LineChart.Axis.Range as Range
-import LineChart.Axis.Ticks as Ticks
-import LineChart.Axis.Tick as Tick
-import Svg exposing (Svg)
-import TypedSvg.Attributes as SvgAttr
-import TypedSvg.Attributes.InPx as SvgAttrPx
-import TypedSvg.Types exposing (Fill(..))
+import LineChart
 
 
 ---- TEST-DATA ----
@@ -91,218 +70,6 @@ data5 =
         (\x -> 0.03 * x ^ 2 - 0.5 * x - 3.5 + 5 * sin (3 * x))
 
 
-format : Float -> String
-format number =
-    NumberSuffix.format
-        { scientificConfig | locale = frenchLocale }
-        number
-
-
-
----- CHART ----
-
-
-eventsConfig : PlotState -> Events.Config Point PlotMsg
-eventsConfig state =
-    Events.custom
-        [ Events.onMouseDown MouseDown Events.getData
-        , Events.onMouseUp MouseUp Events.getData
-        , case state.mouseDown of
-            Nothing ->
-                Events.onMouseMove Hover Events.getNearest
-
-            Just _ ->
-                Events.onMouseMove Move Events.getData
-        , Events.onMouseLeave MouseLeave
-        ]
-
-
-xAxisConfig : PlotState -> Float -> Axis.Config Point msg
-xAxisConfig state width =
-    Axis.custom
-        { title = Title.default "x"
-        , variable = Just << .x
-        , pixels = round width
-        , range = state.xAxisConfig
-        , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = ticksConfig
-        }
-
-
-yAxisConfig : PlotState -> Float -> Axis.Config Point msg
-yAxisConfig state height =
-    Axis.custom
-        { title = Title.default "y"
-        , variable = Just << .y
-        , pixels = round height
-        , range = state.yAxisConfig
-        , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = Ticks.floatCustom 4 customTick
-        }
-
-
-ticksConfig : Ticks.Config msg
-ticksConfig =
-    Ticks.floatCustom 7 customTick
-
-
-customTick : Float -> Tick.Config msg
-customTick value =
-    let
-        label =
-            Junk.label Colors.black (format value)
-    in
-        Tick.custom
-            { position = value
-            , color = Colors.black
-            , width = 1
-            , length = 2
-            , grid = False
-            , direction = Tick.negative
-            , label = Just label
-            }
-
-
-containerConfig : Container.Config msg
-containerConfig =
-    Container.custom
-        { attributesHtml = []
-        , attributesSvg = [ SvgAttrPx.fontSize 10 ]
-        , size = Container.relative
-        , margin =
-            { top = 30
-            , right = 110
-            , bottom = 30
-            , left = 50
-            }
-        , id = "whatever"
-        }
-
-
-dragBox : Point -> Point -> Coordinate.System -> Svg msg
-dragBox a b system =
-    Junk.rectangle system
-        [ SvgAttr.fill <| Fill Colors.grayLightest
-        , SvgAttr.stroke Colors.grayLight
-        , SvgAttrPx.strokeWidth 1
-        , SvgAttr.strokeDasharray "3 3"
-        ]
-        (min a.x b.x)
-        (max a.x b.x)
-        (min a.y b.y)
-        (max a.y b.y)
-
-
-hoverJunk : Point -> Coordinate.System -> List (Svg msg)
-hoverJunk hovered system =
-    let
-        textX =
-            format hovered.x
-
-        textY =
-            format hovered.y
-
-        label sys offsetY text =
-            Junk.labelAt
-                sys
-                hovered.x
-                hovered.y
-                8
-                offsetY
-                "anchor-blah"
-                Colors.black
-                text
-    in
-        [ label system -15 textX
-        , label system -5 textY
-        ]
-
-
-junkConfig : PlotState -> Junk.Config Point msg
-junkConfig state =
-    case state.mouseDown of
-        Nothing ->
-            case state.hovered of
-                Nothing ->
-                    Junk.default
-
-                Just hovered ->
-                    Junk.custom
-                        (\sys ->
-                            { below = []
-                            , above = hoverJunk hovered sys
-                            , html = []
-                            }
-                        )
-
-        Just downPoint ->
-            case state.moved of
-                Nothing ->
-                    Junk.default
-
-                Just movedPoint ->
-                    Junk.custom
-                        (\sys ->
-                            { below = [ dragBox downPoint movedPoint sys ]
-                            , above = []
-                            , html = []
-                            }
-                        )
-
-
-dotsConfig : Maybe Point -> Dots.Config Point
-dotsConfig hovered =
-    let
-        noDot =
-            Dots.full 0
-
-        dot =
-            Dots.disconnected 10 1
-
-        styleLegend _ =
-            dot
-
-        styleIndividual point =
-            case hovered of
-                Just hoveredPoint ->
-                    if point == hoveredPoint then
-                        dot
-                    else
-                        noDot
-
-                Nothing ->
-                    noDot
-    in
-        Dots.customAny
-            { legend = styleLegend
-            , individual = styleIndividual
-            }
-
-
-chartConfig : PlotState -> Float -> Float -> Config Point PlotMsg
-chartConfig state width height =
-    { x = xAxisConfig state width
-    , y = yAxisConfig state height
-    , container = containerConfig
-    , interpolation = Interpolation.default
-    , intersection = Intersection.default
-    , legends = Legends.default
-    , events = eventsConfig state
-    , junk = junkConfig state
-    , grid = Grid.default
-    , area = Area.default
-    , line = Line.default
-    , dots = dotsConfig state.hovered
-    }
-
-
-chart : PlotState -> Float -> Float -> Lines -> Html PlotMsg
-chart state width height lines =
-    viewCustom
-        (chartConfig state width height)
-        lines
-
-
 
 ---- MODEL ----
 
@@ -316,43 +83,11 @@ type alias Model =
     }
 
 
-type alias PlotState =
-    { mouseDown : Maybe Point
-    , rangeX : Maybe Range
-    , rangeY : Maybe Range
-    , xAxisConfig : Range.Config
-    , yAxisConfig : Range.Config
-    , hovered : Maybe Point
-    , moved : Maybe Point
-    , nr : PlotNr
-    , movedSinceMouseDown : Int
-    }
-
-
-unZoomed : Range.Config
-unZoomed =
-    Range.padded 20 20
-
-
-plotInit : PlotNr -> PlotState
-plotInit nr =
-    { mouseDown = Nothing
-    , rangeX = Nothing
-    , rangeY = Nothing
-    , xAxisConfig = unZoomed
-    , yAxisConfig = unZoomed
-    , hovered = Nothing
-    , moved = Nothing
-    , nr = nr
-    , movedSinceMouseDown = 0
-    }
-
-
 init : ( Model, Cmd Msg )
 init =
-    ( { plot1 = plotInit Plot1
-      , plot2 = plotInit Plot2
-      , plot3 = plotInit Plot3
+    ( { plot1 = plotInit
+      , plot2 = plotInit
+      , plot3 = plotInit
       , plotWidth = 0
       , plotHeight = 0
       }
@@ -362,44 +97,6 @@ init =
 
 
 ---- UPDATE ----
-
-
-type XY
-    = X
-    | Y
-
-
-newRange : PlotState -> Point -> XY -> ( Maybe Range, Range.Config )
-newRange state mouseUp xy =
-    case state.mouseDown of
-        Just a ->
-            let
-                b =
-                    mouseUp
-
-                acc =
-                    case xy of
-                        X ->
-                            .x
-
-                        Y ->
-                            .y
-
-                zoomMin =
-                    min (acc a) (acc b)
-
-                zoomMax =
-                    max (acc a) (acc b)
-            in
-                if state.movedSinceMouseDown > 2 then
-                    ( Just <| Range zoomMin zoomMax
-                    , Range.window zoomMin zoomMax
-                    )
-                else
-                    ( Nothing, unZoomed )
-
-        Nothing ->
-            ( Nothing, unZoomed )
 
 
 type alias Id =
@@ -416,14 +113,6 @@ type Msg
     = ToPlot PlotNr PlotMsg
     | Resize Int Int
     | NewBrowserSize (Result Error Viewport)
-
-
-type PlotMsg
-    = MouseDown Point
-    | MouseUp Point
-    | Hover (Maybe Point)
-    | Move Point
-    | MouseLeave
 
 
 getBrowserSize : Cmd Msg
@@ -482,74 +171,8 @@ updatePlotDimensions model width height =
         }
 
 
-plotUpdate : PlotMsg -> PlotState -> PlotState
-plotUpdate msg state =
-    case msg of
-        MouseDown point ->
-            { state
-                | mouseDown = Just point
-                , hovered = Nothing
-                , moved = Nothing
-            }
-
-        MouseUp point ->
-            let
-                ( rx, xc ) =
-                    newRange state point X
-
-                ( ry, yc ) =
-                    newRange state point Y
-            in
-                { state
-                    | xAxisConfig = xc
-                    , yAxisConfig = yc
-                    , rangeX = rx
-                    , rangeY = ry
-                    , mouseDown = Nothing
-                    , movedSinceMouseDown = 0
-                }
-
-        Hover point ->
-            { state | hovered = point }
-
-        Move point ->
-            case state.mouseDown of
-                Nothing ->
-                    { state | moved = Just point }
-
-                Just _ ->
-                    let
-                        oldCount =
-                            state.movedSinceMouseDown
-                    in
-                        { state
-                            | moved = Just point
-                            , movedSinceMouseDown = oldCount + 1
-                        }
-
-        MouseLeave ->
-            { state
-                | hovered = Nothing
-                , mouseDown = Nothing
-                , movedSinceMouseDown = 0
-            }
-
-
 
 ---- VIEW ----
-
-
-type alias Lines =
-    List (Series Point)
-
-
-toPoints : (data -> Float) -> (data -> Float) -> List data -> List Point
-toPoints xAcc yAcc records =
-    let
-        constructor =
-            (\record -> Point (xAcc record) (yAcc record))
-    in
-        List.map constructor records
 
 
 lines1 : Lines
@@ -580,33 +203,32 @@ id str =
     htmlAttribute <| Html.Attributes.id str
 
 
-type alias Plot =
-    { nr : PlotNr
-    , plotState : PlotState
+plot1 : Model -> PlotConfig
+plot1 model =
+    PlotConfig model.plot1 lines1 model.plotWidth model.plotHeight
+
+
+plot2 : Model -> PlotConfig
+plot2 model =
+    PlotConfig model.plot2 lines2 model.plotWidth model.plotHeight
+
+
+plot3 : Model -> PlotConfig
+plot3 model =
+    PlotConfig model.plot3 lines3 model.plotWidth model.plotHeight
+
+
+type alias PlotConfig =
+    { plotState : PlotState
     , lines : Lines
     , width : Float
     , height : Float
     }
 
 
-plot1 : Model -> Plot
-plot1 model =
-    Plot Plot1 model.plot1 lines1 model.plotWidth model.plotHeight
-
-
-plot2 : Model -> Plot
-plot2 model =
-    Plot Plot2 model.plot2 lines2 model.plotWidth model.plotHeight
-
-
-plot3 : Model -> Plot
-plot3 model =
-    Plot Plot3 model.plot3 lines3 model.plotWidth model.plotHeight
-
-
-draw : Model -> Plot -> Element Msg
-draw model plot =
-    Element.map (\msg -> ToPlot plot.nr msg)
+draw : Model -> PlotConfig -> (PlotMsg -> msg) -> Element msg
+draw model plot toMsg =
+    Element.map toMsg
         (el
             [ width fill
             , height fill
@@ -679,9 +301,9 @@ view model =
                     , height fill
                     , id "plotColumn1"
                     ]
-                    [ draw model <| plot1 model
-                    , draw model <| plot2 model
-                    , draw model <| plot3 model
+                    [ draw model (plot1 model) (\msg -> ToPlot Plot1 msg)
+                    , draw model (plot2 model) (\msg -> ToPlot Plot2 msg)
+                    , draw model (plot3 model) (\msg -> ToPlot Plot3 msg)
                     ]
                 ]
             , column
