@@ -123,7 +123,7 @@ xAxisConfig state width =
         { title = Title.default "x"
         , variable = Just << .x
         , pixels = round width
-        , range = state.xConfig
+        , range = state.xAxisConfig
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = ticksConfig
         }
@@ -135,7 +135,7 @@ yAxisConfig state height =
         { title = Title.default "y"
         , variable = Just << .y
         , pixels = round height
-        , range = state.yConfig
+        , range = state.yAxisConfig
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = Ticks.floatCustom 4 customTick
         }
@@ -320,8 +320,8 @@ type alias PlotState =
     { mouseDown : Maybe DataPoint
     , rangeX : Maybe Range
     , rangeY : Maybe Range
-    , xConfig : Range.Config
-    , yConfig : Range.Config
+    , xAxisConfig : Range.Config
+    , yAxisConfig : Range.Config
     , hovered : Maybe DataPoint
     , moved : Maybe DataPoint
     , nr : PlotNr
@@ -339,8 +339,8 @@ plotInit nr =
     { mouseDown = Nothing
     , rangeX = Nothing
     , rangeY = Nothing
-    , xConfig = unZoomed
-    , yConfig = unZoomed
+    , xAxisConfig = unZoomed
+    , yAxisConfig = unZoomed
     , hovered = Nothing
     , moved = Nothing
     , nr = nr
@@ -501,8 +501,8 @@ plotUpdate msg state =
                     newRange state point Y
             in
                 { state
-                    | xConfig = xc
-                    , yConfig = yc
+                    | xAxisConfig = xc
+                    , yAxisConfig = yc
                     , rangeX = rx
                     , rangeY = ry
                     , mouseDown = Nothing
