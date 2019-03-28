@@ -1,5 +1,11 @@
 module Plot exposing (..)
 
+import DateFormat as Format
+import DateFormat.Language exposing (swedish)
+import NumberSuffix exposing (format, scientificConfig)
+import FormatNumber.Locales exposing (frenchLocale)
+import TimeHelpers exposing (..)
+import Time exposing (Posix)
 import Html exposing (Html)
 import NumberSuffix exposing (scientificConfig)
 import FormatNumber.Locales exposing (frenchLocale)
@@ -72,8 +78,131 @@ draw plot toMsg =
                     plot.width
                     plot.height
                     plot.lines
+                    plot.xIsTime
                 )
         )
+
+
+timeConvert : Posix -> Float
+timeConvert =
+    (Time.posixToMillis >> toFloat)
+
+
+
+---- TIME PLOTTING STUFF ----
+
+
+customTimeTick : Tick.Time -> Tick.Config msg
+customTimeTick info =
+    let
+        label =
+            customFormatRouter info
+    in
+        Tick.custom
+            { position = toFloat (Time.posixToMillis info.timestamp)
+            , color = Colors.gray
+            , width = 1
+            , length = 8
+            , grid = False
+            , direction = Tick.negative
+            , label = Just <| Junk.label Colors.black label
+            }
+
+
+customFormatRouter : Tick.Time -> String
+customFormatRouter info =
+    case ( info.isFirst, info.change ) of
+        ( True, _ ) ->
+            customFormatFirst info
+
+        ( _, Just change ) ->
+            customFormatChange info
+
+        _ ->
+            customFormat info
+
+
+customFormatFirst : Tick.Time -> String
+customFormatFirst info =
+    case ( info.timestamp, info.interval.unit ) of
+        ( time, Tick.Millisecond ) ->
+            ""
+
+        ( time, Tick.Second ) ->
+            posixToTimeWithSeconds time
+
+        ( time, Tick.Minute ) ->
+            posixToTime time
+
+        ( time, Tick.Hour ) ->
+            posixToTime time
+
+        ( time, Tick.Day ) ->
+            "first m!"
+
+        ( time, Tick.Month ) ->
+            "first y!"
+
+        ( time, Tick.Year ) ->
+            "huh"
+
+
+customFormat : Tick.Time -> String
+customFormat info =
+    case ( info.timestamp, info.interval.unit ) of
+        ( time, Tick.Millisecond ) ->
+            ""
+
+        ( time, Tick.Second ) ->
+            sweFormat
+                [ Format.text ":"
+                , Format.secondFixed
+                ]
+                time
+
+        ( time, Tick.Minute ) ->
+            sweFormat
+                [ Format.text ":"
+                , Format.minuteFixed
+                ]
+                time
+
+        ( time, Tick.Hour ) ->
+            posixToTime time
+
+        ( time, Tick.Day ) ->
+            "d"
+
+        ( time, Tick.Month ) ->
+            "m"
+
+        ( time, Tick.Year ) ->
+            "y"
+
+
+customFormatChange : Tick.Time -> String
+customFormatChange info =
+    case ( info.timestamp, info.interval.unit ) of
+        ( time, Tick.Millisecond ) ->
+            posixToTimeWithSeconds time
+
+        ( time, Tick.Second ) ->
+            posixToTime time
+
+        ( time, Tick.Minute ) ->
+            posixToTime time
+
+        ( time, Tick.Hour ) ->
+            posixToTime time
+
+        ( time, Tick.Day ) ->
+            posixToTime time
+
+        ( time, Tick.Month ) ->
+            "new y!"
+
+        ( time, Tick.Year ) ->
+            "huh"
 
 
 
@@ -95,15 +224,15 @@ eventsConfig state =
         ]
 
 
-xAxisConfig : PlotState -> Float -> Axis.Config Point msg
-xAxisConfig state width =
+xAxisConfig : PlotState -> Float -> Bool -> Axis.Config Point msg
+xAxisConfig state width xIsTime =
     Axis.custom
         { title = Title.default "x"
         , variable = Just << .x
         , pixels = round width
         , range = state.xAxisConfig
         , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = ticksConfig
+        , ticks = xTicksConfig xIsTime
         }
 
 
@@ -119,9 +248,12 @@ yAxisConfig state height =
         }
 
 
-ticksConfig : Ticks.Config msg
-ticksConfig =
-    Ticks.floatCustom 7 customTick
+xTicksConfig : Bool -> Ticks.Config msg
+xTicksConfig xIsTime =
+    if xIsTime then
+        Ticks.timeCustom Time.utc 5 customTimeTick
+    else
+        Ticks.floatCustom 7 customTick
 
 
 customTick : Float -> Tick.Config msg
@@ -171,11 +303,15 @@ dragBox a b system =
         (max a.y b.y)
 
 
-hoverJunk : Point -> Coordinate.System -> List (Svg msg)
-hoverJunk hovered system =
+hoverJunk : Point -> Coordinate.System -> Bool -> List (Svg msg)
+hoverJunk hovered system xIsTime =
     let
         textX =
-            format hovered.x
+            if xIsTime then
+                TimeHelpers.posixToTimeWithSeconds
+                    (Time.millisToPosix <| round hovered.x)
+            else
+                format hovered.x
 
         textY =
             format hovered.y
@@ -196,8 +332,8 @@ hoverJunk hovered system =
         ]
 
 
-junkConfig : PlotState -> Junk.Config Point msg
-junkConfig state =
+junkConfig : PlotState -> Bool -> Junk.Config Point msg
+junkConfig state xIsTime =
     case state.mouseDown of
         Nothing ->
             case state.hovered of
@@ -208,7 +344,7 @@ junkConfig state =
                     Junk.custom
                         (\sys ->
                             { below = []
-                            , above = hoverJunk hovered sys
+                            , above = hoverJunk hovered sys xIsTime
                             , html = []
                             }
                         )
@@ -257,16 +393,16 @@ dotsConfig hovered =
             }
 
 
-chartConfig : PlotState -> Float -> Float -> Config Point PlotMsg
-chartConfig state width height =
-    { x = xAxisConfig state width
+chartConfig : PlotState -> Float -> Float -> Bool -> Config Point PlotMsg
+chartConfig state width height xIsTime =
+    { x = xAxisConfig state width xIsTime
     , y = yAxisConfig state height
     , container = containerConfig
     , interpolation = Interpolation.default
     , intersection = Intersection.default
     , legends = Legends.default
     , events = eventsConfig state
-    , junk = junkConfig state
+    , junk = junkConfig state xIsTime
     , grid = Grid.default
     , area = Area.default
     , line = Line.default
@@ -274,10 +410,10 @@ chartConfig state width height =
     }
 
 
-chart : PlotState -> Float -> Float -> Lines -> Svg PlotMsg
-chart state width height lines =
+chart : PlotState -> Float -> Float -> Lines -> Bool -> Svg PlotMsg
+chart state width height lines xIsTime =
     viewCustom
-        (chartConfig state width height)
+        (chartConfig state width height xIsTime)
         lines
 
 

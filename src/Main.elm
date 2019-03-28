@@ -37,7 +37,7 @@ makeData func =
         xs : List Float
         xs =
             List.map
-                (\x -> toFloat x * 0.1)
+                (\x -> toFloat x * 1000)
             <|
                 List.range -221 65
     in
@@ -180,10 +180,14 @@ myLine color shape title data =
     LineChart.line color shape title (toPoints .foo .bar data)
 
 
+
+-- myLine Colors.blueLight Dots.triangle "exp" data1
+
+
 lines1 : Lines
 lines1 =
-    [ myLine Colors.blueLight Dots.triangle "exp" data1
-    , myLine Colors.pinkLight Dots.plus "poly3xsin" data5
+    [ myLine Colors.pinkLight Dots.plus "poly3xsin" data5
+    , myLine Colors.greenLight Dots.square "poly" data3
     ]
 
 
@@ -210,7 +214,7 @@ plot1 model =
 
 plot2 : Model -> PlotConfig
 plot2 model =
-    PlotConfig model.plot2 lines2 model.plotWidth model.plotHeight False
+    PlotConfig model.plot2 lines2 model.plotWidth model.plotHeight True
 
 
 plot3 : Model -> PlotConfig
