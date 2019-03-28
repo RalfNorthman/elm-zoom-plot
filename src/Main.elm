@@ -173,75 +173,49 @@ updatePlotDimensions model width height =
 
 
 ---- VIEW ----
+-- myLine : Colors.Color -> Dots.Shape -> String -> List Foobar -> Line
+
+
+myLine color shape title data =
+    LineChart.line color shape title (toPoints .foo .bar data)
 
 
 lines1 : Lines
 lines1 =
-    [ LineChart.line Colors.blueLight Dots.triangle "exp" (toPoints .foo .bar data1)
-    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" (toPoints .foo .bar data5)
+    [ myLine Colors.blueLight Dots.triangle "exp" data1
+    , myLine Colors.pinkLight Dots.plus "poly3xsin" data5
     ]
 
 
 lines2 : Lines
 lines2 =
-    [ LineChart.line Colors.tealLight Dots.circle "cos" (toPoints .foo .bar data2)
-    , LineChart.line Colors.greenLight Dots.square "poly" (toPoints .foo .bar data3)
-    , LineChart.line Colors.goldLight Dots.diamond "polysin" (toPoints .foo .bar data4)
+    [ myLine Colors.tealLight Dots.circle "cos" data2
+    , myLine Colors.greenLight Dots.square "poly" data3
+    , myLine Colors.goldLight Dots.diamond "polysin" data4
     ]
 
 
 lines3 : Lines
 lines3 =
-    [ LineChart.line Colors.tealLight Dots.circle "cos" (toPoints .foo .bar data2)
-    , LineChart.line Colors.goldLight Dots.diamond "polysin" (toPoints .foo .bar data4)
-    , LineChart.line Colors.pinkLight Dots.plus "poly3xsin" (toPoints .foo .bar data5)
+    [ myLine Colors.tealLight Dots.circle "cos" data2
+    , myLine Colors.goldLight Dots.diamond "polysin" data4
+    , myLine Colors.pinkLight Dots.plus "poly3xsin" data5
     ]
-
-
-id : String -> Attribute msg
-id str =
-    htmlAttribute <| Html.Attributes.id str
 
 
 plot1 : Model -> PlotConfig
 plot1 model =
-    PlotConfig model.plot1 lines1 model.plotWidth model.plotHeight
+    PlotConfig model.plot1 lines1 model.plotWidth model.plotHeight False
 
 
 plot2 : Model -> PlotConfig
 plot2 model =
-    PlotConfig model.plot2 lines2 model.plotWidth model.plotHeight
+    PlotConfig model.plot2 lines2 model.plotWidth model.plotHeight False
 
 
 plot3 : Model -> PlotConfig
 plot3 model =
-    PlotConfig model.plot3 lines3 model.plotWidth model.plotHeight
-
-
-type alias PlotConfig =
-    { plotState : PlotState
-    , lines : Lines
-    , width : Float
-    , height : Float
-    }
-
-
-draw : Model -> PlotConfig -> (PlotMsg -> msg) -> Element msg
-draw model plot toMsg =
-    Element.map toMsg
-        (el
-            [ width fill
-            , height fill
-            ]
-         <|
-            html
-                (chart
-                    plot.plotState
-                    plot.width
-                    plot.height
-                    plot.lines
-                )
-        )
+    PlotConfig model.plot3 lines3 model.plotWidth model.plotHeight False
 
 
 col : Color.Color -> Element.Color
@@ -299,11 +273,10 @@ view model =
                 , column
                     [ width fill
                     , height fill
-                    , id "plotColumn1"
                     ]
-                    [ draw model (plot1 model) (\msg -> ToPlot Plot1 msg)
-                    , draw model (plot2 model) (\msg -> ToPlot Plot2 msg)
-                    , draw model (plot3 model) (\msg -> ToPlot Plot3 msg)
+                    [ draw (plot1 model) (\msg -> ToPlot Plot1 msg)
+                    , draw (plot2 model) (\msg -> ToPlot Plot2 msg)
+                    , draw (plot3 model) (\msg -> ToPlot Plot3 msg)
                     ]
                 ]
             , column

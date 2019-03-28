@@ -3,6 +3,7 @@ module Plot exposing (..)
 import Html exposing (Html)
 import NumberSuffix exposing (scientificConfig)
 import FormatNumber.Locales exposing (frenchLocale)
+import Element exposing (Element)
 import LineChart exposing (..)
 import LineChart.Area as Area
 import LineChart.Axis as Axis
@@ -46,6 +47,33 @@ toPoints xAcc yAcc records =
             (\record -> Point (xAcc record) (yAcc record))
     in
         List.map constructor records
+
+
+type alias PlotConfig =
+    { plotState : PlotState
+    , lines : Lines
+    , width : Float
+    , height : Float
+    , xIsTime : Bool
+    }
+
+
+draw : PlotConfig -> (PlotMsg -> msg) -> Element msg
+draw plot toMsg =
+    Element.map toMsg
+        (Element.el
+            [ Element.width Element.fill
+            , Element.height Element.fill
+            ]
+         <|
+            Element.html
+                (chart
+                    plot.plotState
+                    plot.width
+                    plot.height
+                    plot.lines
+                )
+        )
 
 
 
