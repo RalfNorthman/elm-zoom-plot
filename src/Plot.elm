@@ -29,6 +29,7 @@ import LineChart.Axis.Title as Title
 import LineChart.Axis.Range as Range
 import LineChart.Axis.Ticks as Ticks
 import LineChart.Axis.Tick as Tick
+import LineChart.Axis.Values as Values
 import Svg exposing (Svg)
 import TypedSvg.Attributes as SvgAttr
 import TypedSvg.Attributes.InPx as SvgAttrPx
@@ -248,10 +249,17 @@ yAxisConfig state height =
         }
 
 
+valuesWithin : Coordinate.Range -> List Tick.Time
+valuesWithin =
+    Values.time Time.utc 6
+
+
 xTicksConfig : Bool -> Ticks.Config msg
 xTicksConfig xIsTime =
     if xIsTime then
-        Ticks.timeCustom Time.utc 5 customTimeTick
+        Ticks.custom <|
+            \dataRange axisRange ->
+                List.map customTimeTick (valuesWithin axisRange)
     else
         Ticks.floatCustom 7 customTick
 
