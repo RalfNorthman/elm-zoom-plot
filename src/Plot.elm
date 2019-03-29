@@ -1,4 +1,14 @@
-module Plot exposing (..)
+module Plot
+    exposing
+        ( PlotState
+        , plotInit
+        , PlotMsg
+        , PlotConfig
+        , plotUpdate
+        , toPoints
+        , draw
+        , Lines
+        )
 
 import DateFormat as Format
 import DateFormat.Language exposing (swedish)
@@ -188,10 +198,16 @@ customFormatChange info =
             posixToTimeWithSeconds time
 
         ( time, Tick.Second ) ->
-            posixToTime time
+            if (Time.toSecond Time.utc time) == 0 then
+                posixToTime time
+            else
+                posixToTimeWithSeconds time
 
         ( time, Tick.Minute ) ->
-            posixToTime time
+            if (Time.toSecond Time.utc time) == 0 then
+                posixToTime time
+            else
+                posixToTimeWithSeconds time
 
         ( time, Tick.Hour ) ->
             posixToTime time
@@ -251,7 +267,7 @@ yAxisConfig state height =
 
 valuesWithin : Coordinate.Range -> List Tick.Time
 valuesWithin =
-    Values.time Time.utc 6
+    Values.time Time.utc 5
 
 
 xTicksConfig : Bool -> Ticks.Config msg
