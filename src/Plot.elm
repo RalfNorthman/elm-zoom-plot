@@ -198,16 +198,10 @@ customFormatChange info =
             posixToTimeWithSeconds time
 
         ( time, Tick.Second ) ->
-            if (Time.toSecond Time.utc time) == 0 then
-                posixToTime time
-            else
-                posixToTimeWithSeconds time
+            posixToTime time
 
         ( time, Tick.Minute ) ->
-            if (Time.toSecond Time.utc time) == 0 then
-                posixToTime time
-            else
-                posixToTimeWithSeconds time
+            posixToTime time
 
         ( time, Tick.Hour ) ->
             posixToTime time
