@@ -137,7 +137,12 @@ customFormatFirst : Tick.Time -> String
 customFormatFirst info =
     case ( info.timestamp, info.interval.unit ) of
         ( time, Tick.Millisecond ) ->
-            ""
+            posixToTimeWithSeconds time
+                ++ sweFormat
+                    [ Format.text "."
+                    , Format.millisecondFixed
+                    ]
+                    time
 
         ( time, Tick.Second ) ->
             posixToTimeWithSeconds time
@@ -166,7 +171,11 @@ customFormat : Tick.Time -> String
 customFormat info =
     case ( info.timestamp, info.interval.unit ) of
         ( time, Tick.Millisecond ) ->
-            ""
+            sweFormat
+                [ Format.text "."
+                , Format.millisecondFixed
+                ]
+                time
 
         ( time, Tick.Second ) ->
             sweFormat
