@@ -241,9 +241,9 @@ xAxisConfig state width xIsTime =
         { title = Title.default "x"
         , variable = Just << .x
         , pixels = round width
-        , range = state.xAxisConfig
+        , range = setRange state.xZoom
         , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = xTicksConfig xIsTime
+        , ticks = xTicksConfig xIsTime state.xZoom
         }
 
 
@@ -253,10 +253,25 @@ yAxisConfig state height =
         { title = Title.default "y"
         , variable = Just << .y
         , pixels = round height
-        , range = state.yAxisConfig
+        , range = setRange state.yZoom
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = Ticks.floatCustom 4 customTick
         }
+
+
+type Zoom
+    = UnZoomed
+    | Zoomed Float Float
+
+
+setRange : Zoom -> Range.Config
+setRange zoom =
+    case zoom of
+        UnZoomed ->
+            Range.padded 20 20
+
+        Zoomed min max ->
+            Range.window min max
 
 
 valuesWithin : Coordinate.Range -> List Tick.Time
@@ -264,12 +279,21 @@ valuesWithin =
     Values.time Time.utc 5
 
 
-xTicksConfig : Bool -> Ticks.Config msg
-xTicksConfig xIsTime =
+xTicksConfig : Bool -> Zoom -> Ticks.Config msg
+xTicksConfig xIsTime zoom =
     if xIsTime then
         Ticks.custom <|
             \dataRange axisRange ->
-                List.map customTimeTick (valuesWithin axisRange)
+                let
+                    range =
+                        case zoom of
+                            UnZoomed ->
+                                dataRange
+
+                            Zoomed _ _ ->
+                                axisRange
+                in
+                    List.map customTimeTick (valuesWithin range)
     else
         Ticks.floatCustom 7 customTick
 
@@ -439,8 +463,8 @@ type alias PlotState =
     { mouseDown : Maybe Point
     , rangeX : Maybe Range
     , rangeY : Maybe Range
-    , xAxisConfig : Range.Config
-    , yAxisConfig : Range.Config
+    , xZoom : Zoom
+    , yZoom : Zoom
     , hovered : Maybe Point
     , moved : Maybe Point
     , movedSinceMouseDown : Int
@@ -455,18 +479,13 @@ type PlotMsg
     | MouseLeave
 
 
-unZoomed : Range.Config
-unZoomed =
-    Range.padded 20 20
-
-
 plotInit : PlotState
 plotInit =
     { mouseDown = Nothing
     , rangeX = Nothing
     , rangeY = Nothing
-    , xAxisConfig = unZoomed
-    , yAxisConfig = unZoomed
+    , xZoom = UnZoomed
+    , yZoom = UnZoomed
     , hovered = Nothing
     , moved = Nothing
     , movedSinceMouseDown = 0
@@ -478,7 +497,7 @@ type XY
     | Y
 
 
-newRange : PlotState -> Point -> XY -> ( Maybe Range, Range.Config )
+newRange : PlotState -> Point -> XY -> ( Maybe Range, Zoom )
 newRange state mouseUp xy =
     case state.mouseDown of
         Just a ->
@@ -502,13 +521,13 @@ newRange state mouseUp xy =
             in
                 if state.movedSinceMouseDown > 2 then
                     ( Just <| Range zoomMin zoomMax
-                    , Range.window zoomMin zoomMax
+                    , Zoomed zoomMin zoomMax
                     )
                 else
-                    ( Nothing, unZoomed )
+                    ( Nothing, UnZoomed )
 
         Nothing ->
-            ( Nothing, unZoomed )
+            ( Nothing, UnZoomed )
 
 
 plotUpdate : PlotMsg -> PlotState -> PlotState
@@ -530,8 +549,8 @@ plotUpdate msg state =
                     newRange state point Y
             in
                 { state
-                    | xAxisConfig = xc
-                    , yAxisConfig = yc
+                    | xZoom = xc
+                    , yZoom = yc
                     , rangeX = rx
                     , rangeY = ry
                     , mouseDown = Nothing
