@@ -37,7 +37,7 @@ makeData func =
         xs : List Float
         xs =
             List.map
-                (\x -> toFloat x * 1000)
+                (\x -> 101001000 + toFloat x * 1000)
             <|
                 List.range -221 65
     in
