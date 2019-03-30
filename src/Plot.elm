@@ -546,32 +546,47 @@ newRange state mouseUp xy =
             ( Nothing, UnZoomed )
 
 
+zoomUpdate : PlotState -> Point -> PlotState
+zoomUpdate state point =
+    let
+        ( rx, xc ) =
+            newRange state point X
+
+        ( ry, yc ) =
+            newRange state point Y
+    in
+        { state
+            | xZoom = xc
+            , yZoom = yc
+            , rangeX = rx
+            , rangeY = ry
+            , mouseDown = Nothing
+            , movedSinceMouseDown = 0
+        }
+
+
 plotUpdate : PlotMsg -> PlotState -> PlotState
 plotUpdate msg state =
     case msg of
         MouseDown point ->
-            { state
-                | mouseDown = Just point
-                , hovered = Nothing
-                , moved = Nothing
-            }
+            case state.mouseDown of
+                Nothing ->
+                    { state
+                        | mouseDown = Just point
+                        , hovered = Nothing
+                        , moved = Nothing
+                    }
+
+                Just oldPoint ->
+                    zoomUpdate state point
 
         MouseUp point ->
-            let
-                ( rx, xc ) =
-                    newRange state point X
+            case state.mouseDown of
+                Just _ ->
+                    zoomUpdate state point
 
-                ( ry, yc ) =
-                    newRange state point Y
-            in
-                { state
-                    | xZoom = xc
-                    , yZoom = yc
-                    , rangeX = rx
-                    , rangeY = ry
-                    , mouseDown = Nothing
-                    , movedSinceMouseDown = 0
-                }
+                Nothing ->
+                    state
 
         Hover point ->
             { state | hovered = point }
@@ -592,8 +607,4 @@ plotUpdate msg state =
                         }
 
         MouseLeave ->
-            { state
-                | hovered = Nothing
-                , mouseDown = Nothing
-                , movedSinceMouseDown = 0
-            }
+            { state | hovered = Nothing }
