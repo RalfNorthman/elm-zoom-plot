@@ -31,43 +31,47 @@ type alias Point =
     { x : Float, y : Float }
 
 
-makeData : (Float -> Float) -> List Foobar
-makeData func =
+makeData : (Float -> Float) -> Float -> List Foobar
+makeData func scale =
     let
         xs : List Float
         xs =
             List.map
-                (\x -> 101001000 + toFloat x * 20000000)
+                (\x -> 101001000 + toFloat x * scale)
             <|
                 List.range -221 65
     in
         List.map (\x -> Foobar x (func x) "foobar") xs
 
 
-data1 : List Foobar
-data1 =
+expData : List Foobar
+expData =
     makeData (\x -> 0.01 ^ (0.04 * x) + 3.5 * (sin (2 * x)))
+        100000
 
 
-data2 : List Foobar
-data2 =
-    makeData cos
+cosData : List Foobar
+cosData =
+    makeData cos 1000000000
 
 
-data3 : List Foobar
-data3 =
+polyData : List Foobar
+polyData =
     makeData (\x -> 0.01 * x * x - 0.1 * x - 0.5)
+        2000000
 
 
-data4 : List Foobar
-data4 =
+polySinData : List Foobar
+polySinData =
     makeData (\x -> 0.01 * x ^ 2 - 0.1 * x - 0.5 + sin x)
+        2000000
 
 
-data5 : List Foobar
-data5 =
+poly3xSinData : List Foobar
+poly3xSinData =
     makeData
         (\x -> 0.03 * x ^ 2 - 0.5 * x - 3.5 + 5 * sin (3 * x))
+        100000000
 
 
 
@@ -186,30 +190,30 @@ myLine color shape title data =
 
 lines1 : Lines
 lines1 =
-    [ myLine Colors.pinkLight Dots.plus "poly3xsin" data5
-    , myLine Colors.greenLight Dots.square "poly" data3
+    [ myLine Colors.goldLight Dots.diamond "polysin" polySinData
+    , myLine Colors.greenLight Dots.square "poly" polyData
     ]
 
 
 lines2 : Lines
 lines2 =
-    [ myLine Colors.tealLight Dots.circle "cos" data2
-    , myLine Colors.greenLight Dots.square "poly" data3
-    , myLine Colors.goldLight Dots.diamond "polysin" data4
+    [ myLine Colors.greenLight Dots.square "poly" polyData
+    , myLine Colors.goldLight Dots.diamond "polysin" polySinData
+    , myLine Colors.pinkLight Dots.plus "poly3xsin" poly3xSinData
     ]
 
 
 lines3 : Lines
 lines3 =
-    [ myLine Colors.tealLight Dots.circle "cos" data2
-    , myLine Colors.goldLight Dots.diamond "polysin" data4
-    , myLine Colors.pinkLight Dots.plus "poly3xsin" data5
+    [ myLine Colors.tealLight Dots.circle "cos" cosData
+    , myLine Colors.goldLight Dots.diamond "polysin" polySinData
+    , myLine Colors.pinkLight Dots.plus "poly3xsin" poly3xSinData
     ]
 
 
 plot1 : Model -> PlotConfig
 plot1 model =
-    PlotConfig model.plot1 lines1 model.plotWidth model.plotHeight False
+    PlotConfig model.plot1 lines1 model.plotWidth model.plotHeight True
 
 
 plot2 : Model -> PlotConfig
@@ -219,7 +223,7 @@ plot2 model =
 
 plot3 : Model -> PlotConfig
 plot3 model =
-    PlotConfig model.plot3 lines3 model.plotWidth model.plotHeight False
+    PlotConfig model.plot3 lines3 model.plotWidth model.plotHeight True
 
 
 col : Color.Color -> Element.Color

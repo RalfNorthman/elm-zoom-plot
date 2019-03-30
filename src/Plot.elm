@@ -154,10 +154,12 @@ customFormatFirst info =
             posixToNameDate time
 
         ( time, Tick.Month ) ->
-            "first y!"
+            posixToMonthNameYear time
 
         ( time, Tick.Year ) ->
-            "huh"
+            sweFormat
+                [ Format.yearNumber ]
+                time
 
 
 customFormat : Tick.Time -> String
@@ -187,10 +189,14 @@ customFormat info =
             posixToNameDate time
 
         ( time, Tick.Month ) ->
-            "m"
+            sweFormat
+                [ Format.monthNameAbbreviated ]
+                time
 
         ( time, Tick.Year ) ->
-            "y"
+            sweFormat
+                [ Format.yearNumber ]
+                time
 
 
 customFormatChange : Tick.Time -> String
@@ -212,7 +218,7 @@ customFormatChange info =
             posixToNameDate time
 
         ( time, Tick.Month ) ->
-            "new y!"
+            posixToMonthNameYear time
 
         ( time, Tick.Year ) ->
             "huh"
