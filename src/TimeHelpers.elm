@@ -45,6 +45,16 @@ posixToDate posix =
         posix
 
 
+posixToNameDate : Posix -> String
+posixToNameDate posix =
+    sweFormat
+        [ Format.dayOfMonthNumber
+        , Format.text " "
+        , Format.monthNameAbbreviated
+        ]
+        posix
+
+
 posixToTime : Posix -> String
 posixToTime posix =
     sweFormat

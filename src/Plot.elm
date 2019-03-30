@@ -126,7 +126,7 @@ customFormatRouter info =
         ( True, _ ) ->
             customFormatFirst info
 
-        ( _, Just change ) ->
+        ( _, Just _ ) ->
             customFormatChange info
 
         _ ->
@@ -146,10 +146,12 @@ customFormatFirst info =
             posixToTime time
 
         ( time, Tick.Hour ) ->
-            posixToTime time
+            posixToNameDate time
+                ++ " "
+                ++ posixToTime time
 
         ( time, Tick.Day ) ->
-            "first m!"
+            posixToNameDate time
 
         ( time, Tick.Month ) ->
             "first y!"
@@ -182,7 +184,7 @@ customFormat info =
             posixToTime time
 
         ( time, Tick.Day ) ->
-            "d"
+            posixToNameDate time
 
         ( time, Tick.Month ) ->
             "m"
@@ -204,10 +206,10 @@ customFormatChange info =
             posixToTime time
 
         ( time, Tick.Hour ) ->
-            posixToTime time
+            posixToNameDate time
 
         ( time, Tick.Day ) ->
-            posixToTime time
+            posixToNameDate time
 
         ( time, Tick.Month ) ->
             "new y!"
@@ -348,6 +350,13 @@ dragBox a b system =
 hoverJunk : Point -> Coordinate.System -> Bool -> List (Svg msg)
 hoverJunk hovered system xIsTime =
     let
+        textDate =
+            if xIsTime then
+                TimeHelpers.posixToDate
+                    (Time.millisToPosix <| round hovered.x)
+            else
+                ""
+
         textX =
             if xIsTime then
                 TimeHelpers.posixToTimeWithSeconds
@@ -369,7 +378,8 @@ hoverJunk hovered system xIsTime =
                 Colors.black
                 text
     in
-        [ label system -15 textX
+        [ label system -25 textDate
+        , label system -15 textX
         , label system -5 textY
         ]
 
