@@ -181,7 +181,7 @@ updatePlotDimensions model width height =
 
 
 myLine color shape title data =
-    LineChart.line color shape title (toPoints .foo .bar data)
+    LineChart.line color shape title data
 
 
 

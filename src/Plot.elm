@@ -5,7 +5,6 @@ module Plot
         , PlotMsg
         , PlotConfig
         , plotUpdate
-        , toPoints
         , draw
         , Lines
         )
@@ -53,29 +52,20 @@ format number =
         number
 
 
-type alias Lines =
-    List (Series Point)
+type alias Lines data =
+    List (Series data)
 
 
-toPoints : (data -> Float) -> (data -> Float) -> List data -> List Point
-toPoints xAcc yAcc records =
-    let
-        constructor =
-            (\record -> Point (xAcc record) (yAcc record))
-    in
-        List.map constructor records
-
-
-type alias PlotConfig =
-    { plotState : PlotState
-    , lines : Lines
+type alias PlotConfig data =
+    { plotState : PlotState data
+    , lines : Lines data
     , width : Float
     , height : Float
     , xIsTime : Bool
     }
 
 
-draw : PlotConfig -> (PlotMsg -> msg) -> Element msg
+draw : PlotConfig data -> (PlotMsg data -> msg) -> Element msg
 draw plot toMsg =
     Element.map toMsg
         (Element.el
@@ -237,7 +227,7 @@ customFormatChange info =
 ---- CHART ----
 
 
-eventsConfig : PlotState -> Events.Config Point PlotMsg
+eventsConfig : PlotState data -> Events.Config data (PlotMsg data)
 eventsConfig state =
     Events.custom
         [ Events.onMouseDown MouseDown Events.getData
@@ -252,11 +242,11 @@ eventsConfig state =
         ]
 
 
-xAxisConfig : PlotState -> Float -> Bool -> Axis.Config Point msg
+xAxisConfig : PlotState data -> Float -> Bool -> Axis.Config data msg
 xAxisConfig state width xIsTime =
     Axis.custom
         { title = Title.default "x"
-        , variable = Just << .x
+        , variable = Just << state.xAcc
         , pixels = round width
         , range = setRange state.xZoom
         , axisLine = AxisLine.rangeFrame Colors.black
@@ -264,11 +254,11 @@ xAxisConfig state width xIsTime =
         }
 
 
-yAxisConfig : PlotState -> Float -> Axis.Config Point msg
+yAxisConfig : PlotState data -> Float -> Axis.Config data msg
 yAxisConfig state height =
     Axis.custom
         { title = Title.default "y"
-        , variable = Just << .y
+        , variable = Just << state.yAcc
         , pixels = round height
         , range = setRange state.yZoom
         , axisLine = AxisLine.rangeFrame Colors.black
@@ -348,45 +338,45 @@ containerConfig =
         }
 
 
-dragBox : Point -> Point -> Coordinate.System -> Svg msg
-dragBox a b system =
+dragBox : PlotState data -> data -> data -> Coordinate.System -> Svg msg
+dragBox state a b system =
     Junk.rectangle system
         [ SvgAttr.fill <| Fill Colors.grayLightest
         , SvgAttr.stroke Colors.grayLight
         , SvgAttrPx.strokeWidth 1
         , SvgAttr.strokeDasharray "3 3"
         ]
-        (min a.x b.x)
-        (max a.x b.x)
-        (min a.y b.y)
-        (max a.y b.y)
+        (min (state.xAcc a) (state.xAcc b))
+        (max (state.xAcc a) (state.xAcc b))
+        (min (state.yAcc a) (state.yAcc b))
+        (max (state.yAcc a) (state.yAcc b))
 
 
-hoverJunk : Point -> Coordinate.System -> Bool -> List (Svg msg)
-hoverJunk hovered system xIsTime =
+hoverJunk : PlotState data -> data -> Coordinate.System -> Bool -> List (Svg msg)
+hoverJunk state hovered system xIsTime =
     let
         textDate =
             if xIsTime then
                 TimeHelpers.posixToDate
-                    (Time.millisToPosix <| round hovered.x)
+                    (Time.millisToPosix <| round (state.xAcc hovered))
             else
                 ""
 
         textX =
             if xIsTime then
                 TimeHelpers.posixToTimeWithSeconds
-                    (Time.millisToPosix <| round hovered.x)
+                    (Time.millisToPosix <| round (state.xAcc hovered))
             else
-                format hovered.x
+                format (state.xAcc hovered)
 
         textY =
-            format hovered.y
+            format (state.yAcc hovered)
 
         label sys offsetY text =
             Junk.labelAt
                 sys
-                hovered.x
-                hovered.y
+                (state.xAcc hovered)
+                (state.yAcc hovered)
                 8
                 offsetY
                 "anchor-blah"
@@ -399,7 +389,7 @@ hoverJunk hovered system xIsTime =
         ]
 
 
-junkConfig : PlotState -> Bool -> Junk.Config Point msg
+junkConfig : PlotState data -> Bool -> Junk.Config data msg
 junkConfig state xIsTime =
     case state.mouseDown of
         Nothing ->
@@ -431,7 +421,7 @@ junkConfig state xIsTime =
                         )
 
 
-dotsConfig : Maybe Point -> Dots.Config Point
+dotsConfig : Maybe data -> Dots.Config data
 dotsConfig hovered =
     let
         noDot =
@@ -460,7 +450,7 @@ dotsConfig hovered =
             }
 
 
-chartConfig : PlotState -> Float -> Float -> Bool -> Config Point PlotMsg
+chartConfig : PlotState data -> Float -> Float -> Bool -> Config data (PlotMsg data)
 chartConfig state width height xIsTime =
     { x = xAxisConfig state width xIsTime
     , y = yAxisConfig state height
@@ -477,35 +467,37 @@ chartConfig state width height xIsTime =
     }
 
 
-chart : PlotState -> Float -> Float -> Lines -> Bool -> Svg PlotMsg
+chart : PlotState data -> Float -> Float -> Lines data -> Bool -> Svg (PlotMsg data)
 chart state width height lines xIsTime =
     viewCustom
         (chartConfig state width height xIsTime)
         lines
 
 
-type alias PlotState =
-    { mouseDown : Maybe Point
+type alias PlotState data =
+    { mouseDown : Maybe data
     , rangeX : Maybe Range
     , rangeY : Maybe Range
     , xZoom : Zoom
     , yZoom : Zoom
-    , hovered : Maybe Point
-    , moved : Maybe Point
+    , hovered : Maybe data
+    , moved : Maybe data
     , movedSinceMouseDown : Int
+    , xAcc : data -> Float
+    , yAcc : data -> Float
     }
 
 
-type PlotMsg
-    = MouseDown Point
-    | MouseUp Point
-    | Hover (Maybe Point)
-    | Move Point
+type PlotMsg data
+    = MouseDown data
+    | MouseUp data
+    | Hover (Maybe data)
+    | Move data
     | MouseLeave
 
 
-plotInit : PlotState
-plotInit =
+plotInit : (data -> Float) -> (data -> Float) -> PlotState data
+plotInit xAcc yAcc =
     { mouseDown = Nothing
     , rangeX = Nothing
     , rangeY = Nothing
@@ -514,6 +506,8 @@ plotInit =
     , hovered = Nothing
     , moved = Nothing
     , movedSinceMouseDown = 0
+    , xAcc = xAcc
+    , yAcc = yAcc
     }
 
 
@@ -522,7 +516,7 @@ type XY
     | Y
 
 
-newRange : PlotState -> Point -> XY -> ( Maybe Range, Zoom )
+newRange : PlotState data -> data -> XY -> ( Maybe Range, Zoom )
 newRange state mouseUp xy =
     case state.mouseDown of
         Just a ->
@@ -533,10 +527,10 @@ newRange state mouseUp xy =
                 acc =
                     case xy of
                         X ->
-                            .x
+                            state.xAcc
 
                         Y ->
-                            .y
+                            state.yAcc
 
                 zoomMin =
                     min (acc a) (acc b)
@@ -555,7 +549,7 @@ newRange state mouseUp xy =
             ( Nothing, UnZoomed )
 
 
-zoomUpdate : PlotState -> Point -> PlotState
+zoomUpdate : PlotState data -> data -> PlotState data
 zoomUpdate state point =
     let
         ( rx, xc ) =
@@ -574,7 +568,7 @@ zoomUpdate state point =
         }
 
 
-plotUpdate : PlotMsg -> PlotState -> PlotState
+plotUpdate : PlotMsg data -> PlotState data -> PlotState data
 plotUpdate msg state =
     case msg of
         MouseDown point ->
