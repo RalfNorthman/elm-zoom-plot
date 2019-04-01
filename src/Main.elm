@@ -101,14 +101,25 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { plot1 = plotInit pointDecoder .foo .bar labelFunc
-      , plot2 = plotInit pointDecoder .foo .bar labelFunc
-      , plot3 = plotInit pointDecoder .foo .bar labelFunc
+    ( { plot1 = plotInit <| plotConfig lines1
+      , plot2 = plotInit <| plotConfig lines2
+      , plot3 = plotInit <| plotConfig lines3
       , plotWidth = 0
       , plotHeight = 0
       }
     , getBrowserSize
     )
+
+
+plotConfig : Lines Foobar -> PlotConfig Foobar
+plotConfig lines =
+    { lines = lines
+    , xIsTime = True
+    , xAcc = .foo
+    , yAcc = .bar
+    , pointDecoder = pointDecoder
+    , labelFunc = labelFunc
+    }
 
 
 pointDecoder : Point -> Foobar
@@ -237,21 +248,6 @@ lines3 =
     ]
 
 
-plot1 : Model -> PlotConfig Foobar
-plot1 model =
-    PlotConfig model.plot1 lines1 model.plotWidth model.plotHeight True
-
-
-plot2 : Model -> PlotConfig Foobar
-plot2 model =
-    PlotConfig model.plot2 lines2 model.plotWidth model.plotHeight True
-
-
-plot3 : Model -> PlotConfig Foobar
-plot3 model =
-    PlotConfig model.plot3 lines3 model.plotWidth model.plotHeight True
-
-
 col : Color.Color -> Element.Color
 col color =
     fromRgb (toRgba color)
@@ -289,36 +285,43 @@ layoutPadding =
 
 view : Model -> Html Msg
 view model =
-    Element.layout
-        [ width fill
-        , height fill
-        , padding layoutPadding
-        ]
-    <|
-        row
+    let
+        myDraw acc sub =
+            draw model.plotWidth
+                model.plotHeight
+                (acc model)
+                (\msg -> ToPlot sub msg)
+    in
+        Element.layout
             [ width fill
             , height fill
+            , padding layoutPadding
             ]
-            [ column
+        <|
+            row
                 [ width fill
                 , height fill
                 ]
-                [ el [ centerX ] thing
-                , column
+                [ column
                     [ width fill
                     , height fill
                     ]
-                    [ draw (plot1 model) (\msg -> ToPlot Plot1 msg)
-                    , draw (plot2 model) (\msg -> ToPlot Plot2 msg)
-                    , draw (plot3 model) (\msg -> ToPlot Plot3 msg)
+                    [ el [ centerX ] thing
+                    , column
+                        [ width fill
+                        , height fill
+                        ]
+                        [ myDraw .plot1 Plot1
+                        , myDraw .plot2 Plot2
+                        , myDraw .plot3 Plot3
+                        ]
+                    ]
+                , column
+                    [ height fill ]
+                    [ el [ alignTop ] invisibleThing
+                    , el [ centerY ] thing
                     ]
                 ]
-            , column
-                [ height fill ]
-                [ el [ alignTop ] invisibleThing
-                , el [ centerY ] thing
-                ]
-            ]
 
 
 

@@ -66,8 +66,13 @@ type alias PlotConfig data =
     }
 
 
-draw : PlotState data -> (PlotMsg data -> msg) -> Element msg
-draw plotState toMsg =
+draw :
+    Float
+    -> Float
+    -> PlotState data
+    -> (PlotMsg data -> msg)
+    -> Element msg
+draw width height plotState toMsg =
     Element.map toMsg
         (Element.el
             [ Element.width Element.fill
@@ -75,7 +80,7 @@ draw plotState toMsg =
             ]
          <|
             Element.html
-                (chart plotState)
+                (chart plotState width height)
         )
 
 
@@ -242,24 +247,24 @@ eventsConfig state =
             ]
 
 
-xAxisConfig : PlotState data -> Axis.Config data msg
-xAxisConfig state =
+xAxisConfig : PlotState data -> Float -> Axis.Config data msg
+xAxisConfig state width =
     Axis.custom
         { title = Title.default "x"
         , variable = Just << state.config.xAcc
-        , pixels = round state.width
+        , pixels = round width
         , range = setRange state.xZoom
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = xTicksConfig state.config.xIsTime state.xZoom
         }
 
 
-yAxisConfig : PlotState data -> Axis.Config data msg
-yAxisConfig state =
+yAxisConfig : PlotState data -> Float -> Axis.Config data msg
+yAxisConfig state height =
     Axis.custom
         { title = Title.default "y"
         , variable = Just << state.config.yAcc
-        , pixels = round state.height
+        , pixels = round height
         , range = setRange state.yZoom
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = Ticks.floatCustom 4 customTick
@@ -480,10 +485,14 @@ dotsConfig hovered =
             }
 
 
-chartConfig : PlotState data -> Config data (PlotMsg data)
-chartConfig state =
-    { x = xAxisConfig state
-    , y = yAxisConfig state
+chartConfig :
+    PlotState data
+    -> Float
+    -> Float
+    -> Config data (PlotMsg data)
+chartConfig state width height =
+    { x = xAxisConfig state width
+    , y = yAxisConfig state height
     , container = containerConfig
     , interpolation = Interpolation.default
     , intersection = Intersection.default
@@ -497,10 +506,10 @@ chartConfig state =
     }
 
 
-chart : PlotState data -> Svg (PlotMsg data)
-chart state =
+chart : PlotState data -> Float -> Float -> Svg (PlotMsg data)
+chart state width height =
     viewCustom
-        (chartConfig state)
+        (chartConfig state width height)
         state.config.lines
 
 
