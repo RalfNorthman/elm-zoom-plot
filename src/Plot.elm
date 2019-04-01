@@ -401,7 +401,12 @@ junkConfig state xIsTime =
                     Junk.custom
                         (\sys ->
                             { below = []
-                            , above = hoverJunk hovered sys xIsTime
+                            , above =
+                                hoverJunk
+                                    state
+                                    hovered
+                                    sys
+                                    xIsTime
                             , html = []
                             }
                         )
@@ -414,7 +419,13 @@ junkConfig state xIsTime =
                 Just movedPoint ->
                     Junk.custom
                         (\sys ->
-                            { below = [ dragBox downPoint movedPoint sys ]
+                            { below =
+                                [ dragBox
+                                    state
+                                    downPoint
+                                    movedPoint
+                                    sys
+                                ]
                             , above = []
                             , html = []
                             }
@@ -450,7 +461,12 @@ dotsConfig hovered =
             }
 
 
-chartConfig : PlotState data -> Float -> Float -> Bool -> Config data (PlotMsg data)
+chartConfig :
+    PlotState data
+    -> Float
+    -> Float
+    -> Bool
+    -> Config data (PlotMsg data)
 chartConfig state width height xIsTime =
     { x = xAxisConfig state width xIsTime
     , y = yAxisConfig state height
@@ -467,7 +483,13 @@ chartConfig state width height xIsTime =
     }
 
 
-chart : PlotState data -> Float -> Float -> Lines data -> Bool -> Svg (PlotMsg data)
+chart :
+    PlotState data
+    -> Float
+    -> Float
+    -> Lines data
+    -> Bool
+    -> Svg (PlotMsg data)
 chart state width height lines xIsTime =
     viewCustom
         (chartConfig state width height xIsTime)
