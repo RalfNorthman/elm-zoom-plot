@@ -229,17 +229,22 @@ customFormatChange info =
 
 eventsConfig : PlotState data -> Events.Config data (PlotMsg data)
 eventsConfig state =
-    Events.custom
-        [ Events.onMouseDown MouseDown Events.getData
-        , Events.onMouseUp MouseUp Events.getData
-        , case state.mouseDown of
-            Nothing ->
-                Events.onMouseMove Hover Events.getNearest
+    let
+        myGetData : Events.Decoder data data
+        myGetData =
+            Events.map state.pointDecoder Events.getData
+    in
+        Events.custom
+            [ Events.onMouseDown MouseDown myGetData
+            , Events.onMouseUp MouseUp myGetData
+            , case state.mouseDown of
+                Nothing ->
+                    Events.onMouseMove Hover Events.getNearest
 
-            Just _ ->
-                Events.onMouseMove Move Events.getData
-        , Events.onMouseLeave MouseLeave
-        ]
+                Just _ ->
+                    Events.onMouseMove Move myGetData
+            , Events.onMouseLeave MouseLeave
+            ]
 
 
 xAxisConfig : PlotState data -> Float -> Bool -> Axis.Config data msg
@@ -507,6 +512,7 @@ type alias PlotState data =
     , movedSinceMouseDown : Int
     , xAcc : data -> Float
     , yAcc : data -> Float
+    , pointDecoder : Point -> data
     }
 
 
@@ -518,8 +524,8 @@ type PlotMsg data
     | MouseLeave
 
 
-plotInit : (data -> Float) -> (data -> Float) -> PlotState data
-plotInit xAcc yAcc =
+plotInit : (Point -> data) -> (data -> Float) -> (data -> Float) -> PlotState data
+plotInit pointDecoder xAcc yAcc =
     { mouseDown = Nothing
     , rangeX = Nothing
     , rangeY = Nothing
@@ -530,6 +536,7 @@ plotInit xAcc yAcc =
     , movedSinceMouseDown = 0
     , xAcc = xAcc
     , yAcc = yAcc
+    , pointDecoder = pointDecoder
     }
 
 
