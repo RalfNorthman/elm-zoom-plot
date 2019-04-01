@@ -5,7 +5,6 @@ module Plot
         , PlotMsg
         , PlotConfig
         , plotUpdate
-        , toPoints
         , draw
         , Lines
         )
@@ -17,6 +16,7 @@ import FormatNumber.Locales exposing (frenchLocale)
 import TimeHelpers exposing (..)
 import Time exposing (Posix)
 import Html exposing (Html)
+import Html.Attributes exposing (style)
 import NumberSuffix exposing (scientificConfig)
 import FormatNumber.Locales exposing (frenchLocale)
 import Element exposing (Element)
@@ -43,7 +43,9 @@ import LineChart.Axis.Values as Values
 import Svg exposing (Svg)
 import TypedSvg.Attributes as SvgAttr
 import TypedSvg.Attributes.InPx as SvgAttrPx
-import TypedSvg.Types exposing (Fill(..))
+import TypedSvg.Types exposing (..)
+import TypedSvg.Core
+import TypedSvg
 
 
 format : Float -> String
@@ -53,30 +55,27 @@ format number =
         number
 
 
-type alias Lines =
-    List (Series Point)
+type alias Lines data =
+    List (Series data)
 
 
-toPoints : (data -> Float) -> (data -> Float) -> List data -> List Point
-toPoints xAcc yAcc records =
-    let
-        constructor =
-            (\record -> Point (xAcc record) (yAcc record))
-    in
-        List.map constructor records
-
-
-type alias PlotConfig =
-    { plotState : PlotState
-    , lines : Lines
-    , width : Float
-    , height : Float
+type alias PlotConfig data =
+    { lines : Lines data
     , xIsTime : Bool
+    , xAcc : data -> Float
+    , yAcc : data -> Float
+    , pointDecoder : Point -> data
+    , labelFunc : data -> String
     }
 
 
-draw : PlotConfig -> (PlotMsg -> msg) -> Element msg
-draw plot toMsg =
+draw :
+    Float
+    -> Float
+    -> PlotState data
+    -> (PlotMsg data -> msg)
+    -> Element msg
+draw width height plotState toMsg =
     Element.map toMsg
         (Element.el
             [ Element.width Element.fill
@@ -84,13 +83,7 @@ draw plot toMsg =
             ]
          <|
             Element.html
-                (chart
-                    plot.plotState
-                    plot.width
-                    plot.height
-                    plot.lines
-                    plot.xIsTime
-                )
+                (chart plotState width height)
         )
 
 
@@ -114,7 +107,7 @@ customTimeTick info =
             , color = Colors.gray
             , width = 1
             , length = 8
-            , grid = False
+            , grid = True
             , direction = Tick.negative
             , label = Just <| Junk.label Colors.black label
             }
@@ -237,38 +230,43 @@ customFormatChange info =
 ---- CHART ----
 
 
-eventsConfig : PlotState -> Events.Config Point PlotMsg
+eventsConfig : PlotState data -> Events.Config data (PlotMsg data)
 eventsConfig state =
-    Events.custom
-        [ Events.onMouseDown MouseDown Events.getData
-        , Events.onMouseUp MouseUp Events.getData
-        , case state.mouseDown of
-            Nothing ->
-                Events.onMouseMove Hover Events.getNearest
+    let
+        myGetData : Events.Decoder data data
+        myGetData =
+            Events.map state.config.pointDecoder Events.getData
+    in
+        Events.custom
+            [ Events.onMouseDown MouseDown myGetData
+            , Events.onMouseUp MouseUp myGetData
+            , case state.mouseDown of
+                Nothing ->
+                    Events.onMouseMove Hover Events.getNearest
 
-            Just _ ->
-                Events.onMouseMove Move Events.getData
-        , Events.onMouseLeave MouseLeave
-        ]
+                Just _ ->
+                    Events.onMouseMove Move myGetData
+            , Events.onMouseLeave MouseLeave
+            ]
 
 
-xAxisConfig : PlotState -> Float -> Bool -> Axis.Config Point msg
-xAxisConfig state width xIsTime =
+xAxisConfig : PlotState data -> Float -> Axis.Config data msg
+xAxisConfig state width =
     Axis.custom
         { title = Title.default "x"
-        , variable = Just << .x
+        , variable = Just << state.config.xAcc
         , pixels = round width
         , range = setRange state.xZoom
         , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = xTicksConfig xIsTime state.xZoom
+        , ticks = xTicksConfig state.config.xIsTime state.xZoom
         }
 
 
-yAxisConfig : PlotState -> Float -> Axis.Config Point msg
+yAxisConfig : PlotState data -> Float -> Axis.Config data msg
 yAxisConfig state height =
     Axis.custom
         { title = Title.default "y"
-        , variable = Just << .y
+        , variable = Just << state.config.yAcc
         , pixels = round height
         , range = setRange state.yZoom
         , axisLine = AxisLine.rangeFrame Colors.black
@@ -326,17 +324,22 @@ customTick value =
             , color = Colors.black
             , width = 1
             , length = 2
-            , grid = False
+            , grid = True
             , direction = Tick.negative
             , label = Just label
             }
+
+
+fontSize : Float
+fontSize =
+    10
 
 
 containerConfig : Container.Config msg
 containerConfig =
     Container.custom
         { attributesHtml = []
-        , attributesSvg = [ SvgAttrPx.fontSize 10 ]
+        , attributesSvg = [ SvgAttrPx.fontSize fontSize ]
         , size = Container.relative
         , margin =
             { top = 30
@@ -348,59 +351,97 @@ containerConfig =
         }
 
 
-dragBox : Point -> Point -> Coordinate.System -> Svg msg
-dragBox a b system =
-    Junk.rectangle system
-        [ SvgAttr.fill <| Fill Colors.grayLightest
-        , SvgAttr.stroke Colors.grayLight
-        , SvgAttrPx.strokeWidth 1
-        , SvgAttr.strokeDasharray "3 3"
-        ]
-        (min a.x b.x)
-        (max a.x b.x)
-        (min a.y b.y)
-        (max a.y b.y)
-
-
-hoverJunk : Point -> Coordinate.System -> Bool -> List (Svg msg)
-hoverJunk hovered system xIsTime =
+dragBox : PlotState data -> data -> data -> Coordinate.System -> Svg msg
+dragBox state a b system =
     let
+        xAcc =
+            state.config.xAcc
+
+        yAcc =
+            state.config.yAcc
+    in
+        Junk.rectangle system
+            [ SvgAttr.fill <| Fill Colors.grayLightest
+            , SvgAttr.stroke Colors.grayLight
+            , SvgAttrPx.strokeWidth 1
+            , SvgAttr.strokeDasharray "3 3"
+            ]
+            (min (xAcc a) (xAcc b))
+            (max (xAcc a) (xAcc b))
+            (min (yAcc a) (yAcc b))
+            (max (yAcc a) (yAcc b))
+
+
+type Hover
+    = RawX
+    | RawY
+
+
+hoverJunk :
+    PlotState data
+    -> data
+    -> Coordinate.System
+    -> Svg (PlotMsg data)
+hoverJunk state hovered sys =
+    let
+        xAcc =
+            state.config.xAcc
+
+        yAcc =
+            state.config.yAcc
+
+        xIsTime =
+            state.config.xIsTime
+
+        customLabel =
+            state.config.labelFunc hovered
+
         textDate =
             if xIsTime then
                 TimeHelpers.posixToDate
-                    (Time.millisToPosix <| round hovered.x)
+                    (Time.millisToPosix <| round (xAcc hovered))
             else
                 ""
 
         textX =
             if xIsTime then
                 TimeHelpers.posixToTimeWithSeconds
-                    (Time.millisToPosix <| round hovered.x)
+                    (Time.millisToPosix <| round (xAcc hovered))
             else
-                format hovered.x
+                format (xAcc hovered)
 
         textY =
-            format hovered.y
+            format (yAcc hovered)
 
-        label sys offsetY text =
-            Junk.labelAt
-                sys
-                hovered.x
-                hovered.y
-                8
-                offsetY
-                "anchor-blah"
-                Colors.black
-                text
+        mySvgText : Float -> String -> Svg (PlotMsg data)
+        mySvgText fontHeights str =
+            TypedSvg.text_
+                [ SvgAttrPx.dy <| fontHeights * fontSize
+                , SvgAttr.alignmentBaseline AlignmentTextBeforeEdge
+                , SvgAttr.textAnchor AnchorEnd
+                ]
+                [ TypedSvg.Core.text str ]
+
+        svgList =
+            [ TypedSvg.g [ style "pointer-events" "none" ]
+                [ mySvgText -3 customLabel
+                , mySvgText -2 textDate
+                , mySvgText -1 textX
+                , mySvgText 0 textY
+                ]
+            ]
     in
-        [ label system -25 textDate
-        , label system -15 textX
-        , label system -5 textY
-        ]
+        Junk.placed
+            sys
+            (xAcc hovered)
+            (yAcc hovered)
+            60
+            -15
+            svgList
 
 
-junkConfig : PlotState -> Bool -> Junk.Config Point msg
-junkConfig state xIsTime =
+junkConfig : PlotState data -> Junk.Config data (PlotMsg data)
+junkConfig state =
     case state.mouseDown of
         Nothing ->
             case state.hovered of
@@ -411,7 +452,12 @@ junkConfig state xIsTime =
                     Junk.custom
                         (\sys ->
                             { below = []
-                            , above = hoverJunk hovered sys xIsTime
+                            , above =
+                                [ hoverJunk
+                                    state
+                                    hovered
+                                    sys
+                                ]
                             , html = []
                             }
                         )
@@ -424,14 +470,20 @@ junkConfig state xIsTime =
                 Just movedPoint ->
                     Junk.custom
                         (\sys ->
-                            { below = [ dragBox downPoint movedPoint sys ]
+                            { below =
+                                [ dragBox
+                                    state
+                                    downPoint
+                                    movedPoint
+                                    sys
+                                ]
                             , above = []
                             , html = []
                             }
                         )
 
 
-dotsConfig : Maybe Point -> Dots.Config Point
+dotsConfig : Maybe data -> Dots.Config data
 dotsConfig hovered =
     let
         noDot =
@@ -460,16 +512,20 @@ dotsConfig hovered =
             }
 
 
-chartConfig : PlotState -> Float -> Float -> Bool -> Config Point PlotMsg
-chartConfig state width height xIsTime =
-    { x = xAxisConfig state width xIsTime
+chartConfig :
+    PlotState data
+    -> Float
+    -> Float
+    -> Config data (PlotMsg data)
+chartConfig state width height =
+    { x = xAxisConfig state width
     , y = yAxisConfig state height
     , container = containerConfig
     , interpolation = Interpolation.default
     , intersection = Intersection.default
     , legends = Legends.default
     , events = eventsConfig state
-    , junk = junkConfig state xIsTime
+    , junk = junkConfig state
     , grid = Grid.default
     , area = Area.default
     , line = Line.default
@@ -477,35 +533,38 @@ chartConfig state width height xIsTime =
     }
 
 
-chart : PlotState -> Float -> Float -> Lines -> Bool -> Svg PlotMsg
-chart state width height lines xIsTime =
+chart : PlotState data -> Float -> Float -> Svg (PlotMsg data)
+chart state width height =
     viewCustom
-        (chartConfig state width height xIsTime)
-        lines
+        (chartConfig state width height)
+        state.config.lines
 
 
-type alias PlotState =
-    { mouseDown : Maybe Point
+type alias PlotState data =
+    { mouseDown : Maybe data
     , rangeX : Maybe Range
     , rangeY : Maybe Range
     , xZoom : Zoom
     , yZoom : Zoom
-    , hovered : Maybe Point
-    , moved : Maybe Point
+    , hovered : Maybe data
+    , moved : Maybe data
     , movedSinceMouseDown : Int
+    , width : Float
+    , height : Float
+    , config : PlotConfig data
     }
 
 
-type PlotMsg
-    = MouseDown Point
-    | MouseUp Point
-    | Hover (Maybe Point)
-    | Move Point
+type PlotMsg data
+    = MouseDown data
+    | MouseUp data
+    | Hover (Maybe data)
+    | Move data
     | MouseLeave
 
 
-plotInit : PlotState
-plotInit =
+plotInit : PlotConfig data -> PlotState data
+plotInit config =
     { mouseDown = Nothing
     , rangeX = Nothing
     , rangeY = Nothing
@@ -514,6 +573,9 @@ plotInit =
     , hovered = Nothing
     , moved = Nothing
     , movedSinceMouseDown = 0
+    , width = 0
+    , height = 0
+    , config = config
     }
 
 
@@ -522,7 +584,7 @@ type XY
     | Y
 
 
-newRange : PlotState -> Point -> XY -> ( Maybe Range, Zoom )
+newRange : PlotState data -> data -> XY -> ( Maybe Range, Zoom )
 newRange state mouseUp xy =
     case state.mouseDown of
         Just a ->
@@ -533,10 +595,10 @@ newRange state mouseUp xy =
                 acc =
                     case xy of
                         X ->
-                            .x
+                            state.config.xAcc
 
                         Y ->
-                            .y
+                            state.config.yAcc
 
                 zoomMin =
                     min (acc a) (acc b)
@@ -555,7 +617,7 @@ newRange state mouseUp xy =
             ( Nothing, UnZoomed )
 
 
-zoomUpdate : PlotState -> Point -> PlotState
+zoomUpdate : PlotState data -> data -> PlotState data
 zoomUpdate state point =
     let
         ( rx, xc ) =
@@ -574,7 +636,7 @@ zoomUpdate state point =
         }
 
 
-plotUpdate : PlotMsg -> PlotState -> PlotState
+plotUpdate : PlotMsg data -> PlotState data -> PlotState data
 plotUpdate msg state =
     case msg of
         MouseDown point ->

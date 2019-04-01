@@ -34,14 +34,26 @@ type alias Point =
 makeData : (Float -> Float) -> Float -> List Foobar
 makeData func scale =
     let
-        xs : List Float
+        xs : List ( Int, Float )
         xs =
-            List.map
-                (\x -> 101001000 + toFloat x * scale)
+            List.indexedMap
+                (\i x -> Tuple.pair i (101001000 + toFloat x * scale))
             <|
                 List.range -221 65
+
+        bazMaker : Int -> String
+        bazMaker index =
+            case modBy 3 index of
+                0 ->
+                    "Wichita Vortex"
+
+                1 ->
+                    "KxKc 3"
+
+                _ ->
+                    "Bolobooz"
     in
-        List.map (\x -> Foobar x (func x) "foobar") xs
+        List.map (\( i, x ) -> Foobar x (func x) <| bazMaker i) xs
 
 
 expData : List Foobar
@@ -79,9 +91,9 @@ poly3xSinData =
 
 
 type alias Model =
-    { plot1 : PlotState
-    , plot2 : PlotState
-    , plot3 : PlotState
+    { plot1 : PlotState Foobar
+    , plot2 : PlotState Foobar
+    , plot3 : PlotState Foobar
     , plotWidth : Float
     , plotHeight : Float
     }
@@ -89,14 +101,39 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { plot1 = plotInit
-      , plot2 = plotInit
-      , plot3 = plotInit
+    ( { plot1 = plotInit <| plotConfig lines1
+      , plot2 = plotInit <| plotConfig lines2
+      , plot3 = plotInit <| plotConfig lines3
       , plotWidth = 0
       , plotHeight = 0
       }
     , getBrowserSize
     )
+
+
+plotConfig : Lines Foobar -> PlotConfig Foobar
+plotConfig lines =
+    { lines = lines
+    , xIsTime = True
+    , xAcc = .foo
+    , yAcc = .bar
+    , pointDecoder = pointDecoder
+    , labelFunc = labelFunc
+    }
+
+
+pointDecoder : Point -> Foobar
+pointDecoder { x, y } =
+    let
+        emptyFoobar =
+            Foobar 0 0 ""
+    in
+        { emptyFoobar | foo = x, bar = y }
+
+
+labelFunc : Foobar -> String
+labelFunc foobar =
+    foobar.baz
 
 
 
@@ -114,7 +151,7 @@ type PlotNr
 
 
 type Msg
-    = ToPlot PlotNr PlotMsg
+    = ToPlot PlotNr (PlotMsg Foobar)
     | Resize Int Int
     | NewBrowserSize (Result Error Viewport)
 
@@ -181,21 +218,21 @@ updatePlotDimensions model width height =
 
 
 myLine color shape title data =
-    LineChart.line color shape title (toPoints .foo .bar data)
+    LineChart.line color shape title data
 
 
 
 -- myLine Colors.blueLight Dots.triangle "exp" data1
 
 
-lines1 : Lines
+lines1 : Lines Foobar
 lines1 =
     [ myLine Colors.goldLight Dots.diamond "polysin" polySinData
     , myLine Colors.greenLight Dots.square "poly" polyData
     ]
 
 
-lines2 : Lines
+lines2 : Lines Foobar
 lines2 =
     [ myLine Colors.greenLight Dots.square "poly" polyData
     , myLine Colors.goldLight Dots.diamond "polysin" polySinData
@@ -203,27 +240,12 @@ lines2 =
     ]
 
 
-lines3 : Lines
+lines3 : Lines Foobar
 lines3 =
     [ myLine Colors.tealLight Dots.circle "cos" cosData
     , myLine Colors.goldLight Dots.diamond "polysin" polySinData
     , myLine Colors.pinkLight Dots.plus "poly3xsin" poly3xSinData
     ]
-
-
-plot1 : Model -> PlotConfig
-plot1 model =
-    PlotConfig model.plot1 lines1 model.plotWidth model.plotHeight True
-
-
-plot2 : Model -> PlotConfig
-plot2 model =
-    PlotConfig model.plot2 lines2 model.plotWidth model.plotHeight True
-
-
-plot3 : Model -> PlotConfig
-plot3 model =
-    PlotConfig model.plot3 lines3 model.plotWidth model.plotHeight True
 
 
 col : Color.Color -> Element.Color
@@ -263,36 +285,43 @@ layoutPadding =
 
 view : Model -> Html Msg
 view model =
-    Element.layout
-        [ width fill
-        , height fill
-        , padding layoutPadding
-        ]
-    <|
-        row
+    let
+        myDraw acc sub =
+            draw model.plotWidth
+                model.plotHeight
+                (acc model)
+                (\msg -> ToPlot sub msg)
+    in
+        Element.layout
             [ width fill
             , height fill
+            , padding layoutPadding
             ]
-            [ column
+        <|
+            row
                 [ width fill
                 , height fill
                 ]
-                [ el [ centerX ] thing
-                , column
+                [ column
                     [ width fill
                     , height fill
                     ]
-                    [ draw (plot1 model) (\msg -> ToPlot Plot1 msg)
-                    , draw (plot2 model) (\msg -> ToPlot Plot2 msg)
-                    , draw (plot3 model) (\msg -> ToPlot Plot3 msg)
+                    [ el [ centerX ] thing
+                    , column
+                        [ width fill
+                        , height fill
+                        ]
+                        [ myDraw .plot1 Plot1
+                        , myDraw .plot2 Plot2
+                        , myDraw .plot3 Plot3
+                        ]
+                    ]
+                , column
+                    [ height fill ]
+                    [ el [ alignTop ] invisibleThing
+                    , el [ centerY ] thing
                     ]
                 ]
-            , column
-                [ height fill ]
-                [ el [ alignTop ] invisibleThing
-                , el [ centerY ] thing
-                ]
-            ]
 
 
 
