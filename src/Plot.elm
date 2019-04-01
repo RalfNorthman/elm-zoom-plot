@@ -107,7 +107,7 @@ customTimeTick info =
             , color = Colors.gray
             , width = 1
             , length = 8
-            , grid = False
+            , grid = True
             , direction = Tick.negative
             , label = Just <| Junk.label Colors.black label
             }
@@ -324,7 +324,7 @@ customTick value =
             , color = Colors.black
             , width = 1
             , length = 2
-            , grid = False
+            , grid = True
             , direction = Tick.negative
             , label = Just label
             }
