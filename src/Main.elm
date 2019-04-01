@@ -79,9 +79,9 @@ poly3xSinData =
 
 
 type alias Model =
-    { plot1 : PlotState
-    , plot2 : PlotState
-    , plot3 : PlotState
+    { plot1 : PlotState Foobar
+    , plot2 : PlotState Foobar
+    , plot3 : PlotState Foobar
     , plotWidth : Float
     , plotHeight : Float
     }
@@ -89,14 +89,23 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { plot1 = plotInit
-      , plot2 = plotInit
-      , plot3 = plotInit
+    ( { plot1 = plotInit pointDecoder .foo .bar
+      , plot2 = plotInit pointDecoder .foo .bar
+      , plot3 = plotInit pointDecoder .foo .bar
       , plotWidth = 0
       , plotHeight = 0
       }
     , getBrowserSize
     )
+
+
+pointDecoder : Point -> Foobar
+pointDecoder { x, y } =
+    let
+        emptyFoobar =
+            Foobar 0 0 ""
+    in
+        { emptyFoobar | foo = x, bar = y }
 
 
 
@@ -114,7 +123,7 @@ type PlotNr
 
 
 type Msg
-    = ToPlot PlotNr PlotMsg
+    = ToPlot PlotNr (PlotMsg Foobar)
     | Resize Int Int
     | NewBrowserSize (Result Error Viewport)
 
@@ -188,14 +197,14 @@ myLine color shape title data =
 -- myLine Colors.blueLight Dots.triangle "exp" data1
 
 
-lines1 : Lines
+lines1 : Lines Foobar
 lines1 =
     [ myLine Colors.goldLight Dots.diamond "polysin" polySinData
     , myLine Colors.greenLight Dots.square "poly" polyData
     ]
 
 
-lines2 : Lines
+lines2 : Lines Foobar
 lines2 =
     [ myLine Colors.greenLight Dots.square "poly" polyData
     , myLine Colors.goldLight Dots.diamond "polysin" polySinData
@@ -203,7 +212,7 @@ lines2 =
     ]
 
 
-lines3 : Lines
+lines3 : Lines Foobar
 lines3 =
     [ myLine Colors.tealLight Dots.circle "cos" cosData
     , myLine Colors.goldLight Dots.diamond "polysin" polySinData
@@ -211,17 +220,17 @@ lines3 =
     ]
 
 
-plot1 : Model -> PlotConfig
+plot1 : Model -> PlotConfig Foobar
 plot1 model =
     PlotConfig model.plot1 lines1 model.plotWidth model.plotHeight True
 
 
-plot2 : Model -> PlotConfig
+plot2 : Model -> PlotConfig Foobar
 plot2 model =
     PlotConfig model.plot2 lines2 model.plotWidth model.plotHeight True
 
 
-plot3 : Model -> PlotConfig
+plot3 : Model -> PlotConfig Foobar
 plot3 model =
     PlotConfig model.plot3 lines3 model.plotWidth model.plotHeight True
 
