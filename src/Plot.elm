@@ -43,6 +43,8 @@ import Svg exposing (Svg)
 import TypedSvg.Attributes as SvgAttr
 import TypedSvg.Attributes.InPx as SvgAttrPx
 import TypedSvg.Types exposing (Fill(..))
+import TypedSvg.Core
+import TypedSvg
 
 
 format : Float -> String
@@ -327,11 +329,16 @@ customTick value =
             }
 
 
+fontSize : Float
+fontSize =
+    10
+
+
 containerConfig : Container.Config msg
 containerConfig =
     Container.custom
         { attributesHtml = []
-        , attributesSvg = [ SvgAttrPx.fontSize 10 ]
+        , attributesSvg = [ SvgAttrPx.fontSize fontSize ]
         , size = Container.relative
         , margin =
             { top = 30
@@ -364,8 +371,13 @@ dragBox state a b system =
             (max (yAcc a) (yAcc b))
 
 
-hoverJunk : PlotState data -> data -> Coordinate.System -> List (Svg msg)
-hoverJunk state hovered system =
+type Hover
+    = RawX
+    | RawY
+
+
+hoverJunk : PlotState data -> data -> Coordinate.System -> Svg msg
+hoverJunk state hovered sys =
     let
         xAcc =
             state.config.xAcc
@@ -396,22 +408,23 @@ hoverJunk state hovered system =
         textY =
             format (yAcc hovered)
 
-        label sys offsetY text =
-            Junk.labelAt
-                sys
-                (xAcc hovered)
-                (yAcc hovered)
-                8
-                offsetY
-                "anchor-blah"
-                Colors.black
-                text
+        svgList =
+            [ TypedSvg.text_
+                []
+                [ TypedSvg.Core.text customLabel
+                , TypedSvg.Core.text textDate
+                , TypedSvg.Core.text textX
+                , TypedSvg.Core.text textY
+                ]
+            ]
     in
-        [ label system -35 customLabel
-        , label system -25 textDate
-        , label system -15 textX
-        , label system -5 textY
-        ]
+        Junk.placed
+            sys
+            (xAcc hovered)
+            (yAcc hovered)
+            8
+            -5
+            svgList
 
 
 junkConfig : PlotState data -> Junk.Config data msg
@@ -427,10 +440,11 @@ junkConfig state =
                         (\sys ->
                             { below = []
                             , above =
-                                hoverJunk
+                                [ hoverJunk
                                     state
                                     hovered
                                     sys
+                                ]
                             , html = []
                             }
                         )
