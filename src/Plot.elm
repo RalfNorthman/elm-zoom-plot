@@ -57,16 +57,17 @@ type alias Lines data =
 
 
 type alias PlotConfig data =
-    { plotState : PlotState data
-    , lines : Lines data
-    , width : Float
-    , height : Float
+    { lines : Lines data
     , xIsTime : Bool
+    , xAcc : data -> Float
+    , yAcc : data -> Float
+    , pointDecoder : Point -> data
+    , labelFunc : data -> String
     }
 
 
-draw : PlotConfig data -> (PlotMsg data -> msg) -> Element msg
-draw plot toMsg =
+draw : PlotState data -> (PlotMsg data -> msg) -> Element msg
+draw plotState toMsg =
     Element.map toMsg
         (Element.el
             [ Element.width Element.fill
@@ -74,13 +75,7 @@ draw plot toMsg =
             ]
          <|
             Element.html
-                (chart
-                    plot.plotState
-                    plot.width
-                    plot.height
-                    plot.lines
-                    plot.xIsTime
-                )
+                (chart plotState)
         )
 
 
@@ -232,7 +227,7 @@ eventsConfig state =
     let
         myGetData : Events.Decoder data data
         myGetData =
-            Events.map state.pointDecoder Events.getData
+            Events.map state.config.pointDecoder Events.getData
     in
         Events.custom
             [ Events.onMouseDown MouseDown myGetData
@@ -247,24 +242,24 @@ eventsConfig state =
             ]
 
 
-xAxisConfig : PlotState data -> Float -> Bool -> Axis.Config data msg
-xAxisConfig state width xIsTime =
+xAxisConfig : PlotState data -> Axis.Config data msg
+xAxisConfig state =
     Axis.custom
         { title = Title.default "x"
-        , variable = Just << state.xAcc
-        , pixels = round width
+        , variable = Just << state.config.xAcc
+        , pixels = round state.width
         , range = setRange state.xZoom
         , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = xTicksConfig xIsTime state.xZoom
+        , ticks = xTicksConfig state.config.xIsTime state.xZoom
         }
 
 
-yAxisConfig : PlotState data -> Float -> Axis.Config data msg
-yAxisConfig state height =
+yAxisConfig : PlotState data -> Axis.Config data msg
+yAxisConfig state =
     Axis.custom
         { title = Title.default "y"
-        , variable = Just << state.yAcc
-        , pixels = round height
+        , variable = Just << state.config.yAcc
+        , pixels = round state.height
         , range = setRange state.yZoom
         , axisLine = AxisLine.rangeFrame Colors.black
         , ticks = Ticks.floatCustom 4 customTick
@@ -345,52 +340,62 @@ containerConfig =
 
 dragBox : PlotState data -> data -> data -> Coordinate.System -> Svg msg
 dragBox state a b system =
-    Junk.rectangle system
-        [ SvgAttr.fill <| Fill Colors.grayLightest
-        , SvgAttr.stroke Colors.grayLight
-        , SvgAttrPx.strokeWidth 1
-        , SvgAttr.strokeDasharray "3 3"
-        ]
-        (min (state.xAcc a) (state.xAcc b))
-        (max (state.xAcc a) (state.xAcc b))
-        (min (state.yAcc a) (state.yAcc b))
-        (max (state.yAcc a) (state.yAcc b))
-
-
-hoverJunk :
-    PlotState data
-    -> data
-    -> Coordinate.System
-    -> Bool
-    -> (data -> String)
-    -> List (Svg msg)
-hoverJunk state hovered system xIsTime labelFunc =
     let
+        xAcc =
+            state.config.xAcc
+
+        yAcc =
+            state.config.yAcc
+    in
+        Junk.rectangle system
+            [ SvgAttr.fill <| Fill Colors.grayLightest
+            , SvgAttr.stroke Colors.grayLight
+            , SvgAttrPx.strokeWidth 1
+            , SvgAttr.strokeDasharray "3 3"
+            ]
+            (min (xAcc a) (xAcc b))
+            (max (xAcc a) (xAcc b))
+            (min (yAcc a) (yAcc b))
+            (max (yAcc a) (yAcc b))
+
+
+hoverJunk : PlotState data -> data -> Coordinate.System -> List (Svg msg)
+hoverJunk state hovered system =
+    let
+        xAcc =
+            state.config.xAcc
+
+        yAcc =
+            state.config.yAcc
+
+        xIsTime =
+            state.config.xIsTime
+
         customLabel =
-            labelFunc hovered
+            state.config.labelFunc hovered
 
         textDate =
             if xIsTime then
                 TimeHelpers.posixToDate
-                    (Time.millisToPosix <| round (state.xAcc hovered))
+                    (Time.millisToPosix <| round (xAcc hovered))
             else
                 ""
 
         textX =
             if xIsTime then
                 TimeHelpers.posixToTimeWithSeconds
-                    (Time.millisToPosix <| round (state.xAcc hovered))
+                    (Time.millisToPosix <| round (xAcc hovered))
             else
-                format (state.xAcc hovered)
+                format (xAcc hovered)
 
         textY =
-            format (state.yAcc hovered)
+            format (yAcc hovered)
 
         label sys offsetY text =
             Junk.labelAt
                 sys
-                (state.xAcc hovered)
-                (state.yAcc hovered)
+                (xAcc hovered)
+                (yAcc hovered)
                 8
                 offsetY
                 "anchor-blah"
@@ -404,8 +409,8 @@ hoverJunk state hovered system xIsTime labelFunc =
         ]
 
 
-junkConfig : PlotState data -> Bool -> Junk.Config data msg
-junkConfig state xIsTime =
+junkConfig : PlotState data -> Junk.Config data msg
+junkConfig state =
     case state.mouseDown of
         Nothing ->
             case state.hovered of
@@ -421,8 +426,6 @@ junkConfig state xIsTime =
                                     state
                                     hovered
                                     sys
-                                    xIsTime
-                                    state.labelFunc
                             , html = []
                             }
                         )
@@ -477,21 +480,16 @@ dotsConfig hovered =
             }
 
 
-chartConfig :
-    PlotState data
-    -> Float
-    -> Float
-    -> Bool
-    -> Config data (PlotMsg data)
-chartConfig state width height xIsTime =
-    { x = xAxisConfig state width xIsTime
-    , y = yAxisConfig state height
+chartConfig : PlotState data -> Config data (PlotMsg data)
+chartConfig state =
+    { x = xAxisConfig state
+    , y = yAxisConfig state
     , container = containerConfig
     , interpolation = Interpolation.default
     , intersection = Intersection.default
     , legends = Legends.default
     , events = eventsConfig state
-    , junk = junkConfig state xIsTime
+    , junk = junkConfig state
     , grid = Grid.default
     , area = Area.default
     , line = Line.default
@@ -499,17 +497,11 @@ chartConfig state width height xIsTime =
     }
 
 
-chart :
-    PlotState data
-    -> Float
-    -> Float
-    -> Lines data
-    -> Bool
-    -> Svg (PlotMsg data)
-chart state width height lines xIsTime =
+chart : PlotState data -> Svg (PlotMsg data)
+chart state =
     viewCustom
-        (chartConfig state width height xIsTime)
-        lines
+        (chartConfig state)
+        state.config.lines
 
 
 type alias PlotState data =
@@ -521,10 +513,9 @@ type alias PlotState data =
     , hovered : Maybe data
     , moved : Maybe data
     , movedSinceMouseDown : Int
-    , xAcc : data -> Float
-    , yAcc : data -> Float
-    , pointDecoder : Point -> data
-    , labelFunc : data -> String
+    , width : Float
+    , height : Float
+    , config : PlotConfig data
     }
 
 
@@ -536,13 +527,8 @@ type PlotMsg data
     | MouseLeave
 
 
-plotInit :
-    (Point -> data)
-    -> (data -> Float)
-    -> (data -> Float)
-    -> (data -> String)
-    -> PlotState data
-plotInit pointDecoder xAcc yAcc labelFunc =
+plotInit : PlotConfig data -> PlotState data
+plotInit config =
     { mouseDown = Nothing
     , rangeX = Nothing
     , rangeY = Nothing
@@ -551,10 +537,9 @@ plotInit pointDecoder xAcc yAcc labelFunc =
     , hovered = Nothing
     , moved = Nothing
     , movedSinceMouseDown = 0
-    , xAcc = xAcc
-    , yAcc = yAcc
-    , pointDecoder = pointDecoder
-    , labelFunc = labelFunc
+    , width = 0
+    , height = 0
+    , config = config
     }
 
 
@@ -574,10 +559,10 @@ newRange state mouseUp xy =
                 acc =
                     case xy of
                         X ->
-                            state.xAcc
+                            state.config.xAcc
 
                         Y ->
-                            state.yAcc
+                            state.config.yAcc
 
                 zoomMin =
                     min (acc a) (acc b)
