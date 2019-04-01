@@ -16,6 +16,7 @@ import FormatNumber.Locales exposing (frenchLocale)
 import TimeHelpers exposing (..)
 import Time exposing (Posix)
 import Html exposing (Html)
+import Html.Attributes exposing (style)
 import NumberSuffix exposing (scientificConfig)
 import FormatNumber.Locales exposing (frenchLocale)
 import Element exposing (Element)
@@ -42,7 +43,7 @@ import LineChart.Axis.Values as Values
 import Svg exposing (Svg)
 import TypedSvg.Attributes as SvgAttr
 import TypedSvg.Attributes.InPx as SvgAttrPx
-import TypedSvg.Types exposing (Fill(..))
+import TypedSvg.Types exposing (..)
 import TypedSvg.Core
 import TypedSvg
 
@@ -376,7 +377,11 @@ type Hover
     | RawY
 
 
-hoverJunk : PlotState data -> data -> Coordinate.System -> Svg msg
+hoverJunk :
+    PlotState data
+    -> data
+    -> Coordinate.System
+    -> Svg (PlotMsg data)
 hoverJunk state hovered sys =
     let
         xAcc =
@@ -408,13 +413,21 @@ hoverJunk state hovered sys =
         textY =
             format (yAcc hovered)
 
+        mySvgText : Float -> String -> Svg (PlotMsg data)
+        mySvgText fontHeights str =
+            TypedSvg.text_
+                [ SvgAttrPx.dy <| fontHeights * fontSize
+                , SvgAttr.alignmentBaseline AlignmentTextBeforeEdge
+                , SvgAttr.textAnchor AnchorEnd
+                ]
+                [ TypedSvg.Core.text str ]
+
         svgList =
-            [ TypedSvg.text_
-                []
-                [ TypedSvg.Core.text customLabel
-                , TypedSvg.Core.text textDate
-                , TypedSvg.Core.text textX
-                , TypedSvg.Core.text textY
+            [ TypedSvg.g [ style "pointer-events" "none" ]
+                [ mySvgText -3 customLabel
+                , mySvgText -2 textDate
+                , mySvgText -1 textX
+                , mySvgText 0 textY
                 ]
             ]
     in
@@ -422,12 +435,12 @@ hoverJunk state hovered sys =
             sys
             (xAcc hovered)
             (yAcc hovered)
-            8
-            -5
+            60
+            -15
             svgList
 
 
-junkConfig : PlotState data -> Junk.Config data msg
+junkConfig : PlotState data -> Junk.Config data (PlotMsg data)
 junkConfig state =
     case state.mouseDown of
         Nothing ->
