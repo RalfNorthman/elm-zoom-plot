@@ -357,9 +357,18 @@ dragBox state a b system =
         (max (state.yAcc a) (state.yAcc b))
 
 
-hoverJunk : PlotState data -> data -> Coordinate.System -> Bool -> List (Svg msg)
-hoverJunk state hovered system xIsTime =
+hoverJunk :
+    PlotState data
+    -> data
+    -> Coordinate.System
+    -> Bool
+    -> (data -> String)
+    -> List (Svg msg)
+hoverJunk state hovered system xIsTime labelFunc =
     let
+        customLabel =
+            labelFunc hovered
+
         textDate =
             if xIsTime then
                 TimeHelpers.posixToDate
@@ -388,7 +397,8 @@ hoverJunk state hovered system xIsTime =
                 Colors.black
                 text
     in
-        [ label system -25 textDate
+        [ label system -35 customLabel
+        , label system -25 textDate
         , label system -15 textX
         , label system -5 textY
         ]
@@ -412,6 +422,7 @@ junkConfig state xIsTime =
                                     hovered
                                     sys
                                     xIsTime
+                                    state.labelFunc
                             , html = []
                             }
                         )
@@ -513,6 +524,7 @@ type alias PlotState data =
     , xAcc : data -> Float
     , yAcc : data -> Float
     , pointDecoder : Point -> data
+    , labelFunc : data -> String
     }
 
 
@@ -524,8 +536,13 @@ type PlotMsg data
     | MouseLeave
 
 
-plotInit : (Point -> data) -> (data -> Float) -> (data -> Float) -> PlotState data
-plotInit pointDecoder xAcc yAcc =
+plotInit :
+    (Point -> data)
+    -> (data -> Float)
+    -> (data -> Float)
+    -> (data -> String)
+    -> PlotState data
+plotInit pointDecoder xAcc yAcc labelFunc =
     { mouseDown = Nothing
     , rangeX = Nothing
     , rangeY = Nothing
@@ -537,6 +554,7 @@ plotInit pointDecoder xAcc yAcc =
     , xAcc = xAcc
     , yAcc = yAcc
     , pointDecoder = pointDecoder
+    , labelFunc = labelFunc
     }
 
 

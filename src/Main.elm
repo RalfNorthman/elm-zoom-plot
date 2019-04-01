@@ -34,14 +34,26 @@ type alias Point =
 makeData : (Float -> Float) -> Float -> List Foobar
 makeData func scale =
     let
-        xs : List Float
+        xs : List ( Int, Float )
         xs =
-            List.map
-                (\x -> 101001000 + toFloat x * scale)
+            List.indexedMap
+                (\i x -> Tuple.pair i (101001000 + toFloat x * scale))
             <|
                 List.range -221 65
+
+        bazMaker : Int -> String
+        bazMaker index =
+            case modBy 3 index of
+                0 ->
+                    "Wichita Vortex"
+
+                1 ->
+                    "KxKc 3"
+
+                _ ->
+                    "Bolobooz"
     in
-        List.map (\x -> Foobar x (func x) "foobar") xs
+        List.map (\( i, x ) -> Foobar x (func x) <| bazMaker i) xs
 
 
 expData : List Foobar
@@ -89,9 +101,9 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { plot1 = plotInit pointDecoder .foo .bar
-      , plot2 = plotInit pointDecoder .foo .bar
-      , plot3 = plotInit pointDecoder .foo .bar
+    ( { plot1 = plotInit pointDecoder .foo .bar labelFunc
+      , plot2 = plotInit pointDecoder .foo .bar labelFunc
+      , plot3 = plotInit pointDecoder .foo .bar labelFunc
       , plotWidth = 0
       , plotHeight = 0
       }
@@ -106,6 +118,11 @@ pointDecoder { x, y } =
             Foobar 0 0 ""
     in
         { emptyFoobar | foo = x, bar = y }
+
+
+labelFunc : Foobar -> String
+labelFunc foobar =
+    foobar.baz
 
 
 
