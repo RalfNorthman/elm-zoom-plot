@@ -1,5 +1,12 @@
 {
     "type": "package",
+    "name": "RalfNorthman/zoom-chart",
+    "summary": "Plotting line charts with zoom and hover labels.",
+    "license": "BSD-3-Clause",
+    "version": "0.0.1",
+    "exposed-modules": [
+      "Plot"
+    ],
     "source-directories": [
         "elm-stuff/gitdeps/github.com/RalfNorthman/line-charts.git/src",
         "src"
