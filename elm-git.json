@@ -1,8 +1,5 @@
 {
     "git-dependencies": {
-        "direct": {
-            "https://github.com/RalfNorthman/line-charts.git": "01c56ac3cdb22"
-        },
-        "indirect": {}
+        "https://github.com/RalfNorthman/line-charts.git": "01c56ac3cdb22"
     }
 }
