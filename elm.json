@@ -1,5 +1,5 @@
 {
-    "type": "application",
+    "type": "package",
     "source-directories": [
         "elm-stuff/gitdeps/github.com/RalfNorthman/line-charts.git/src",
         "src"
