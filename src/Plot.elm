@@ -267,7 +267,7 @@ xAxisConfig state width =
 yAxisConfig : PlotState data -> Float -> Axis.Config data msg
 yAxisConfig state height =
     Axis.custom
-        { title = Title.default state.config.yLabel
+        { title = Title.atAxisMax 70 0 state.config.yLabel
         , variable = Just << state.config.yAcc
         , pixels = round height
         , range = setRange state.yZoom
