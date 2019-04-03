@@ -46,6 +46,7 @@ import TypedSvg.Attributes.InPx as SvgAttrPx
 import TypedSvg.Types exposing (..)
 import TypedSvg.Core
 import TypedSvg
+import Color
 
 
 format : Float -> String
@@ -345,7 +346,7 @@ containerConfig =
         , attributesSvg = [ SvgAttrPx.fontSize fontSize ]
         , size = Container.relative
         , margin =
-            { top = 30
+            { top = 50
             , right = 110
             , bottom = 30
             , left = 50
@@ -416,21 +417,38 @@ hoverJunk state hovered sys =
         textY =
             format (yAcc hovered)
 
-        mySvgText : Float -> String -> Svg (PlotMsg data)
-        mySvgText fontHeights str =
-            TypedSvg.text_
-                [ SvgAttrPx.dy <| fontHeights * fontSize
-                , SvgAttr.alignmentBaseline AlignmentTextBeforeEdge
-                , SvgAttr.textAnchor AnchorEnd
-                ]
-                [ TypedSvg.Core.text str ]
+        mySvgText : Float -> String -> Bool -> Svg (PlotMsg data)
+        mySvgText fontHeights str bigWhite =
+            let
+                attributes =
+                    if bigWhite then
+                        [ SvgAttrPx.dy <| fontHeights * (fontSize + 2)
+                        , SvgAttr.alignmentBaseline AlignmentTextBeforeEdge
+                        , SvgAttr.textAnchor AnchorEnd
+                        , SvgAttr.stroke Color.white
+                        , SvgAttrPx.strokeWidth 5
+                        ]
+                    else
+                        [ SvgAttrPx.dy <| fontHeights * (fontSize + 2)
+                        , SvgAttr.alignmentBaseline AlignmentTextBeforeEdge
+                        , SvgAttr.textAnchor AnchorEnd
+                        ]
+            in
+                TypedSvg.text_
+                    attributes
+                    [ TypedSvg.Core.text str ]
 
         svgList =
-            [ TypedSvg.g [ style "pointer-events" "none" ]
-                [ mySvgText -3 customLabel
-                , mySvgText -2 textDate
-                , mySvgText -1 textX
-                , mySvgText 0 textY
+            [ TypedSvg.g
+                [ style "pointer-events" "none" ]
+                [ mySvgText -3 customLabel True
+                , mySvgText -3 customLabel False
+                , mySvgText -2 textDate True
+                , mySvgText -2 textDate False
+                , mySvgText -1 textX True
+                , mySvgText -1 textX False
+                , mySvgText 0 textY True
+                , mySvgText 0 textY False
                 ]
             ]
     in
@@ -439,7 +457,7 @@ hoverJunk state hovered sys =
             (xAcc hovered)
             (yAcc hovered)
             60
-            -15
+            -20
             svgList
 
 
