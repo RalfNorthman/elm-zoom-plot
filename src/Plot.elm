@@ -2,7 +2,7 @@ module Plot
     exposing
         ( PlotState
         , plotInit
-        , PlotMsg
+        , PlotMsg(..)
         , PlotConfig
         , plotUpdate
         , draw
@@ -561,6 +561,8 @@ type PlotMsg data
     | Hover (Maybe data)
     | Move data
     | MouseLeave
+    | UpdateConfig (PlotConfig data)
+    | UpdateDims Int Int
 
 
 plotInit : PlotConfig data -> PlotState data
@@ -679,3 +681,9 @@ plotUpdate msg state =
 
         MouseLeave ->
             { state | hovered = Nothing }
+
+        UpdateConfig newConfig ->
+            { state | config = newConfig }
+
+        UpdateDims width height ->
+            { state | width = toFloat width, height = toFloat height }
