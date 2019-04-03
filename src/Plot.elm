@@ -62,6 +62,7 @@ type alias Lines data =
 type alias PlotConfig data =
     { lines : Lines data
     , xIsTime : Bool
+    , showLegends : Bool
     , xAcc : data -> Float
     , yAcc : data -> Float
     , pointDecoder : Point -> data
@@ -525,7 +526,11 @@ chartConfig state width height =
     , container = containerConfig
     , interpolation = Interpolation.default
     , intersection = Intersection.default
-    , legends = Legends.default
+    , legends =
+        if state.config.showLegends then
+            Legends.default
+        else
+            Legends.none
     , events = eventsConfig state
     , junk = junkConfig state
     , grid = Grid.default
@@ -562,6 +567,7 @@ type PlotMsg data
     | Move data
     | MouseLeave
     | UpdateConfig (PlotConfig data)
+    | ResetZoom
 
 
 plotInit : PlotConfig data -> PlotState data
@@ -681,3 +687,9 @@ plotUpdate msg state =
 
         UpdateConfig newConfig ->
             { state | config = newConfig }
+
+        ResetZoom ->
+            { state
+                | xZoom = UnZoomed
+                , yZoom = UnZoomed
+            }
