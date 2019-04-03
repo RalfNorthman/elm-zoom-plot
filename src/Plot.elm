@@ -332,7 +332,7 @@ customTick value =
 
 fontSize : Float
 fontSize =
-    10
+    12
 
 
 containerConfig : Container.Config msg
@@ -549,8 +549,6 @@ type alias PlotState data =
     , hovered : Maybe data
     , moved : Maybe data
     , movedSinceMouseDown : Int
-    , width : Float
-    , height : Float
     , config : PlotConfig data
     }
 
@@ -562,7 +560,6 @@ type PlotMsg data
     | Move data
     | MouseLeave
     | UpdateConfig (PlotConfig data)
-    | UpdateDims Int Int
 
 
 plotInit : PlotConfig data -> PlotState data
@@ -575,8 +572,6 @@ plotInit config =
     , hovered = Nothing
     , moved = Nothing
     , movedSinceMouseDown = 0
-    , width = 0
-    , height = 0
     , config = config
     }
 
@@ -684,6 +679,3 @@ plotUpdate msg state =
 
         UpdateConfig newConfig ->
             { state | config = newConfig }
-
-        UpdateDims width height ->
-            { state | width = toFloat width, height = toFloat height }
