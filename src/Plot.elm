@@ -269,7 +269,7 @@ xAxisConfig state width =
 yAxisConfig : PlotState data -> Float -> Axis.Config data msg
 yAxisConfig state height =
     Axis.custom
-        { title = Title.atAxisMax 70 0 state.config.yLabel
+        { title = Title.atAxisMax 80 0 state.config.yLabel
         , variable = Just << state.config.yAcc
         , pixels = round height
         , range = setRange state.yZoom
@@ -336,7 +336,7 @@ customTick value =
 
 fontSize : Float
 fontSize =
-    12
+    14
 
 
 containerConfig : Container.Config msg
