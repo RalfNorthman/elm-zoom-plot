@@ -66,6 +66,8 @@ type alias PlotConfig data =
     , yAcc : data -> Float
     , pointDecoder : Point -> data
     , labelFunc : data -> String
+    , xLabel : String
+    , yLabel : String
     }
 
 
@@ -253,7 +255,7 @@ eventsConfig state =
 xAxisConfig : PlotState data -> Float -> Axis.Config data msg
 xAxisConfig state width =
     Axis.custom
-        { title = Title.default "x"
+        { title = Title.default state.config.xLabel
         , variable = Just << state.config.xAcc
         , pixels = round width
         , range = setRange state.xZoom
@@ -265,7 +267,7 @@ xAxisConfig state width =
 yAxisConfig : PlotState data -> Float -> Axis.Config data msg
 yAxisConfig state height =
     Axis.custom
-        { title = Title.default "y"
+        { title = Title.default state.config.yLabel
         , variable = Just << state.config.yAcc
         , pixels = round height
         , range = setRange state.yZoom
