@@ -268,14 +268,20 @@ xAxisConfig state width =
 
 yAxisConfig : PlotState data -> Float -> Axis.Config data msg
 yAxisConfig state height =
-    Axis.custom
-        { title = Title.atAxisMax 80 0 state.config.yLabel
-        , variable = Just << state.config.yAcc
-        , pixels = round height
-        , range = setRange state.yZoom
-        , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = Ticks.floatCustom 4 customTick
-        }
+    let
+        xOffset =
+            5
+                * String.length state.config.yLabel
+                |> toFloat
+    in
+        Axis.custom
+            { title = Title.atAxisMax xOffset 0 state.config.yLabel
+            , variable = Just << state.config.yAcc
+            , pixels = round height
+            , range = setRange state.yZoom
+            , axisLine = AxisLine.rangeFrame Colors.black
+            , ticks = Ticks.floatCustom 4 customTick
+            }
 
 
 type Zoom
