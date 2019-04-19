@@ -1,32 +1,33 @@
-module Plot
-    exposing
-        ( PlotState
-        , plotInit
-        , PlotMsg(..)
-        , PlotConfig
-        , plotUpdate
-        , draw
-        , Lines
-        )
+module Plot exposing
+    ( Lines
+    , PlotConfig
+    , PlotMsg(..)
+    , PlotState
+    , draw
+    , plotInit
+    , plotUpdate
+    )
 
+import Color
 import DateFormat as Format
 import DateFormat.Language exposing (swedish)
-import NumberSuffix exposing (format, scientificConfig)
+import Element exposing (Element)
 import FormatNumber.Locales exposing (frenchLocale)
-import TimeHelpers exposing (..)
-import Time exposing (Posix)
 import Html exposing (Html)
 import Html.Attributes exposing (style)
-import NumberSuffix exposing (scientificConfig)
-import FormatNumber.Locales exposing (frenchLocale)
-import Element exposing (Element)
 import LineChart exposing (..)
 import LineChart.Area as Area
 import LineChart.Axis as Axis
 import LineChart.Axis.Intersection as Intersection
 import LineChart.Axis.Line as AxisLine
+import LineChart.Axis.Range as Range
+import LineChart.Axis.Tick as Tick
+import LineChart.Axis.Ticks as Ticks
+import LineChart.Axis.Title as Title
+import LineChart.Axis.Values as Values
 import LineChart.Colors as Colors
 import LineChart.Container as Container
+import LineChart.Coordinate as Coordinate exposing (Point, Range)
 import LineChart.Dots as Dots
 import LineChart.Events as Events
 import LineChart.Grid as Grid
@@ -34,19 +35,15 @@ import LineChart.Interpolation as Interpolation
 import LineChart.Junk as Junk
 import LineChart.Legends as Legends
 import LineChart.Line as Line
-import LineChart.Coordinate as Coordinate exposing (Range, Point)
-import LineChart.Axis.Title as Title
-import LineChart.Axis.Range as Range
-import LineChart.Axis.Ticks as Ticks
-import LineChart.Axis.Tick as Tick
-import LineChart.Axis.Values as Values
+import NumberSuffix exposing (format, scientificConfig)
 import Svg exposing (Svg)
+import Time exposing (Posix)
+import TimeHelpers exposing (..)
+import TypedSvg
 import TypedSvg.Attributes as SvgAttr
 import TypedSvg.Attributes.InPx as SvgAttrPx
-import TypedSvg.Types exposing (..)
 import TypedSvg.Core
-import TypedSvg
-import Color
+import TypedSvg.Types exposing (..)
 
 
 format : Float -> String
@@ -93,7 +90,7 @@ draw width height plotState toMsg =
 
 timeConvert : Posix -> Float
 timeConvert =
-    (Time.posixToMillis >> toFloat)
+    Time.posixToMillis >> toFloat
 
 
 
@@ -106,15 +103,15 @@ customTimeTick info =
         label =
             customFormatRouter info
     in
-        Tick.custom
-            { position = toFloat (Time.posixToMillis info.timestamp)
-            , color = Colors.gray
-            , width = 1
-            , length = 8
-            , grid = True
-            , direction = Tick.negative
-            , label = Just <| Junk.label Colors.black label
-            }
+    Tick.custom
+        { position = toFloat (Time.posixToMillis info.timestamp)
+        , color = Colors.gray
+        , width = 1
+        , length = 8
+        , grid = True
+        , direction = Tick.negative
+        , label = Just <| Junk.label Colors.black label
+        }
 
 
 customFormatRouter : Tick.Time -> String
@@ -241,17 +238,17 @@ eventsConfig state =
         myGetData =
             Events.map state.config.pointDecoder Events.getData
     in
-        Events.custom
-            [ Events.onMouseDown MouseDown myGetData
-            , Events.onMouseUp MouseUp myGetData
-            , case state.mouseDown of
-                Nothing ->
-                    Events.onMouseMove Hover Events.getNearest
+    Events.custom
+        [ Events.onMouseDown MouseDown myGetData
+        , Events.onMouseUp MouseUp myGetData
+        , case state.mouseDown of
+            Nothing ->
+                Events.onMouseMove Hover Events.getNearest
 
-                Just _ ->
-                    Events.onMouseMove Move myGetData
-            , Events.onMouseLeave MouseLeave
-            ]
+            Just _ ->
+                Events.onMouseMove Move myGetData
+        , Events.onMouseLeave MouseLeave
+        ]
 
 
 xAxisConfig : PlotState data -> Float -> Axis.Config data msg
@@ -274,14 +271,14 @@ yAxisConfig state height =
                 * String.length state.config.yLabel
                 |> toFloat
     in
-        Axis.custom
-            { title = Title.atAxisMax xOffset 0 state.config.yLabel
-            , variable = Just << state.config.yAcc
-            , pixels = round height
-            , range = setRange state.yZoom
-            , axisLine = AxisLine.rangeFrame Colors.black
-            , ticks = Ticks.floatCustom 4 customTick
-            }
+    Axis.custom
+        { title = Title.atAxisMax xOffset 0 state.config.yLabel
+        , variable = Just << state.config.yAcc
+        , pixels = round height
+        , range = setRange state.yZoom
+        , axisLine = AxisLine.rangeFrame Colors.black
+        , ticks = Ticks.floatCustom 4 customTick
+        }
 
 
 type Zoom
@@ -318,7 +315,8 @@ xTicksConfig xIsTime zoom =
                             Zoomed _ _ ->
                                 axisRange
                 in
-                    List.map customTimeTick (valuesWithin range)
+                List.map customTimeTick (valuesWithin range)
+
     else
         Ticks.floatCustom 7 customTick
 
@@ -329,15 +327,15 @@ customTick value =
         label =
             Junk.label Colors.black (format value)
     in
-        Tick.custom
-            { position = value
-            , color = Colors.black
-            , width = 1
-            , length = 2
-            , grid = True
-            , direction = Tick.negative
-            , label = Just label
-            }
+    Tick.custom
+        { position = value
+        , color = Colors.black
+        , width = 1
+        , length = 2
+        , grid = True
+        , direction = Tick.negative
+        , label = Just label
+        }
 
 
 fontSize : Float
@@ -370,16 +368,16 @@ dragBox state a b system =
         yAcc =
             state.config.yAcc
     in
-        Junk.rectangle system
-            [ SvgAttr.fill <| Fill Colors.grayLightest
-            , SvgAttr.stroke Colors.grayLight
-            , SvgAttrPx.strokeWidth 1
-            , SvgAttr.strokeDasharray "3 3"
-            ]
-            (min (xAcc a) (xAcc b))
-            (max (xAcc a) (xAcc b))
-            (min (yAcc a) (yAcc b))
-            (max (yAcc a) (yAcc b))
+    Junk.rectangle system
+        [ SvgAttr.fill <| Fill Colors.grayLightest
+        , SvgAttr.stroke Colors.grayLight
+        , SvgAttrPx.strokeWidth 1
+        , SvgAttr.strokeDasharray "3 3"
+        ]
+        (min (xAcc a) (xAcc b))
+        (max (xAcc a) (xAcc b))
+        (min (yAcc a) (yAcc b))
+        (max (yAcc a) (yAcc b))
 
 
 type Hover
@@ -410,6 +408,7 @@ hoverJunk state hovered sys =
             if xIsTime then
                 TimeHelpers.posixToDate
                     (Time.millisToPosix <| round (xAcc hovered))
+
             else
                 ""
 
@@ -417,6 +416,7 @@ hoverJunk state hovered sys =
             if xIsTime then
                 TimeHelpers.posixToTimeWithSeconds
                     (Time.millisToPosix <| round (xAcc hovered))
+
             else
                 format (xAcc hovered)
 
@@ -434,15 +434,16 @@ hoverJunk state hovered sys =
                         , SvgAttr.stroke Color.white
                         , SvgAttrPx.strokeWidth 5
                         ]
+
                     else
                         [ SvgAttrPx.dy <| fontHeights * (fontSize + 2)
                         , SvgAttr.alignmentBaseline AlignmentTextBeforeEdge
                         , SvgAttr.textAnchor AnchorEnd
                         ]
             in
-                TypedSvg.text_
-                    attributes
-                    [ TypedSvg.Core.text str ]
+            TypedSvg.text_
+                attributes
+                [ TypedSvg.Core.text str ]
 
         svgList =
             [ TypedSvg.g
@@ -458,13 +459,13 @@ hoverJunk state hovered sys =
                 ]
             ]
     in
-        Junk.placed
-            sys
-            (xAcc hovered)
-            (yAcc hovered)
-            60
-            -20
-            svgList
+    Junk.placed
+        sys
+        (xAcc hovered)
+        (yAcc hovered)
+        60
+        -20
+        svgList
 
 
 junkConfig : PlotState data -> Junk.Config data (PlotMsg data)
@@ -527,16 +528,17 @@ dotsConfig hovered =
                 Just hoveredPoint ->
                     if point == hoveredPoint then
                         dot
+
                     else
                         noDot
 
                 Nothing ->
                     noDot
     in
-        Dots.customAny
-            { legend = styleLegend
-            , individual = styleIndividual
-            }
+    Dots.customAny
+        { legend = styleLegend
+        , individual = styleIndividual
+        }
 
 
 chartConfig :
@@ -553,6 +555,7 @@ chartConfig state width height =
     , legends =
         if state.config.showLegends then
             Legends.default
+
         else
             Legends.none
     , events = eventsConfig state
@@ -635,12 +638,13 @@ newRange state mouseUp xy =
                 zoomMax =
                     max (acc a) (acc b)
             in
-                if state.movedSinceMouseDown > 2 then
-                    ( Just <| Range zoomMin zoomMax
-                    , Zoomed zoomMin zoomMax
-                    )
-                else
-                    ( Nothing, UnZoomed )
+            if state.movedSinceMouseDown > 2 then
+                ( Just <| Range zoomMin zoomMax
+                , Zoomed zoomMin zoomMax
+                )
+
+            else
+                ( Nothing, UnZoomed )
 
         Nothing ->
             ( Nothing, UnZoomed )
@@ -655,14 +659,14 @@ zoomUpdate state point =
         ( ry, yc ) =
             newRange state point Y
     in
-        { state
-            | xZoom = xc
-            , yZoom = yc
-            , rangeX = rx
-            , rangeY = ry
-            , mouseDown = Nothing
-            , movedSinceMouseDown = 0
-        }
+    { state
+        | xZoom = xc
+        , yZoom = yc
+        , rangeX = rx
+        , rangeY = ry
+        , mouseDown = Nothing
+        , movedSinceMouseDown = 0
+    }
 
 
 plotUpdate : PlotMsg data -> PlotState data -> PlotState data
@@ -701,10 +705,10 @@ plotUpdate msg state =
                         oldCount =
                             state.movedSinceMouseDown
                     in
-                        { state
-                            | moved = Just point
-                            , movedSinceMouseDown = oldCount + 1
-                        }
+                    { state
+                        | moved = Just point
+                        , movedSinceMouseDown = oldCount + 1
+                    }
 
         MouseLeave ->
             { state | hovered = Nothing }

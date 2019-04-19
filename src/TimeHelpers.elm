@@ -1,16 +1,16 @@
-module TimeHelpers exposing (..)
+module TimeHelpers exposing (duration, posixToDate, posixToHumanString, posixToMonthNameYear, posixToNameDate, posixToString, posixToTime, posixToTimeWithSeconds, posixToUrlString, sweFormat)
 
-import Time exposing (Posix, utc)
 import DateFormat as Format
 import DateFormat.Language exposing (swedish)
 import Parser
+import Time exposing (Posix, utc)
 
 
 duration : Posix -> Posix -> String
 duration from to =
     let
         secs =
-            ((Time.posixToMillis to) - (Time.posixToMillis from)) // 1000
+            (Time.posixToMillis to - Time.posixToMillis from) // 1000
 
         mins =
             toFloat secs / 60 |> round
@@ -18,14 +18,17 @@ duration from to =
         hours =
             toFloat mins / 60 |> round
     in
-        if secs < 2 then
-            "1 sekund"
-        else if secs < 91 then
-            String.fromInt secs ++ " sekunder"
-        else if mins < 151 then
-            String.fromInt mins ++ " minuter"
-        else
-            String.fromInt hours ++ " timmar"
+    if secs < 2 then
+        "1 sekund"
+
+    else if secs < 91 then
+        String.fromInt secs ++ " sekunder"
+
+    else if mins < 151 then
+        String.fromInt mins ++ " minuter"
+
+    else
+        String.fromInt hours ++ " timmar"
 
 
 sweFormat : List Format.Token -> Posix -> String

@@ -1,20 +1,21 @@
-module Main exposing (..)
+module Main exposing (Foobar, Id, Model, Msg(..), PlotNr(..), Point, col, cosData, expData, getBrowserSize, init, invisibleThing, labelFunc, layoutPadding, lines1, lines2, lines3, main, makeData, myLine, plotConfig, pointDecoder, poly3xSinData, polyData, polySinData, subscriptions, thing, thingSize, update, updatePlotDimensions, view)
 
-import Plot exposing (..)
-import Color exposing (toRgba)
 import Browser
+import Browser.Dom exposing (Error, Viewport, getViewport)
 import Browser.Events
-import Browser.Dom exposing (Viewport, Error, getViewport)
-import Task exposing (Task)
+import Color exposing (toRgba)
 import Debug
-import Html exposing (Html)
-import Html.Attributes
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
+import Html exposing (Html)
+import Html.Attributes
+import LineChart
 import LineChart.Colors as Colors
 import LineChart.Dots as Dots
-import LineChart
+import Plot exposing (..)
+import Task exposing (Task)
+
 
 
 ---- TEST-DATA ----
@@ -53,12 +54,12 @@ makeData func scale =
                 _ ->
                     "Bolobooz"
     in
-        List.map (\( i, x ) -> Foobar x (func x) <| bazMaker i) xs
+    List.map (\( i, x ) -> Foobar x (func x) <| bazMaker i) xs
 
 
 expData : List Foobar
 expData =
-    makeData (\x -> 0.01 ^ (0.04 * x) + 3.5 * (sin (2 * x)))
+    makeData (\x -> 0.01 ^ (0.04 * x) + 3.5 * sin (2 * x))
         100000
 
 
@@ -128,7 +129,7 @@ pointDecoder { x, y } =
         emptyFoobar =
             Foobar 0 0 ""
     in
-        { emptyFoobar | foo = x, bar = y }
+    { emptyFoobar | foo = x, bar = y }
 
 
 labelFunc : Foobar -> String
@@ -206,10 +207,10 @@ updatePlotDimensions model width height =
         realEstate dim =
             dim - thingSize - 2 * layoutPadding
     in
-        { model
-            | plotWidth = realEstate width
-            , plotHeight = realEstate height / 3 - 5
-        }
+    { model
+        | plotWidth = realEstate width
+        , plotHeight = realEstate height / 3 - 5
+    }
 
 
 
@@ -292,36 +293,36 @@ view model =
                 (acc model)
                 (\msg -> ToPlot sub msg)
     in
-        Element.layout
+    Element.layout
+        [ width fill
+        , height fill
+        , padding layoutPadding
+        ]
+    <|
+        row
             [ width fill
             , height fill
-            , padding layoutPadding
             ]
-        <|
-            row
+            [ column
                 [ width fill
                 , height fill
                 ]
-                [ column
+                [ el [ centerX ] thing
+                , column
                     [ width fill
                     , height fill
                     ]
-                    [ el [ centerX ] thing
-                    , column
-                        [ width fill
-                        , height fill
-                        ]
-                        [ myDraw .plot1 Plot1
-                        , myDraw .plot2 Plot2
-                        , myDraw .plot3 Plot3
-                        ]
-                    ]
-                , column
-                    [ height fill ]
-                    [ el [ alignTop ] invisibleThing
-                    , el [ centerY ] thing
+                    [ myDraw .plot1 Plot1
+                    , myDraw .plot2 Plot2
+                    , myDraw .plot3 Plot3
                     ]
                 ]
+            , column
+                [ height fill ]
+                [ el [ alignTop ] invisibleThing
+                , el [ centerY ] thing
+                ]
+            ]
 
 
 
