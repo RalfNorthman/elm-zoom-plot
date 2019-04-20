@@ -14,6 +14,7 @@ import Color
 import DateFormat as Format
 import DateFormat.Language exposing (Language, english)
 import Element exposing (Element)
+import FormatNumber
 import FormatNumber.Locales exposing (Locale, usLocale)
 import Html exposing (Html)
 import Html.Attributes exposing (style)
@@ -37,7 +38,6 @@ import LineChart.Interpolation as Interpolation
 import LineChart.Junk as Junk
 import LineChart.Legends as Legends
 import LineChart.Line as Line
-import NumberSuffix exposing (scientificConfig)
 import Svg exposing (Svg)
 import Time exposing (Posix)
 import TimeHelpers exposing (..)
@@ -50,8 +50,8 @@ import TypedSvg.Types exposing (..)
 
 defaultFormat : Float -> String
 defaultFormat number =
-    NumberSuffix.format
-        { scientificConfig | locale = usLocale }
+    FormatNumber.format
+        usLocale
         number
 
 

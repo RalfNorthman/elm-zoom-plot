@@ -4,10 +4,13 @@ import Browser
 import Browser.Dom exposing (Error, Viewport, getViewport)
 import Browser.Events
 import Color exposing (toRgba)
+import DateFormat.Language
 import Debug
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
+import FormatNumber
+import FormatNumber.Locales
 import Html exposing (Html)
 import Html.Attributes
 import LineChart
@@ -123,28 +126,32 @@ plotConfig lines =
                 []
                 (.foo >> Time.posixToMillis >> toFloat)
                 .bar
-                pointDecoder
+                myPointDecoder
     in
     { default
         | lines = lines
         , xIsTime = True
-        , labelFunc = labelFunc
+        , labelFunc = myLabelFunc
+        , language = DateFormat.Language.swedish
+        , numberFormat =
+            \x ->
+                FormatNumber.format FormatNumber.Locales.frenchLocale x
         , margin =
             { top = 20
             , right = 0
             , bottom = 30
-            , left = 60
+            , left = 70
             }
     }
 
 
-pointDecoder : LineChart.Coordinate.Point -> Foobar
-pointDecoder { x, y } =
+myPointDecoder : LineChart.Coordinate.Point -> Foobar
+myPointDecoder { x, y } =
     Foobar (x |> floor |> Time.millisToPosix) y ""
 
 
-labelFunc : Foobar -> String
-labelFunc foobar =
+myLabelFunc : Foobar -> String
+myLabelFunc foobar =
     foobar.baz
 
 
