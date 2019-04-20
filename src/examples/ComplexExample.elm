@@ -14,7 +14,7 @@ import LineChart
 import LineChart.Colors as Colors
 import LineChart.Coordinate
 import LineChart.Dots as Dots
-import Plot exposing (..)
+import Plot
 import Task exposing (Task)
 
 
@@ -276,11 +276,12 @@ layoutPadding =
 view : Model -> Html Msg
 view model =
     let
-        myDraw acc sub =
-            draw model.plotWidth
+        myDraw lines acc rout =
+            Plot.draw model.plotWidth
                 model.plotHeight
+                (plotConfig lines)
                 (acc model)
-                (\msg -> ToPlot sub msg)
+                (\msg -> ToPlot rout msg)
     in
     Element.layout
         [ width fill
@@ -301,9 +302,9 @@ view model =
                     [ width fill
                     , height fill
                     ]
-                    [ myDraw .plot1 Plot1
-                    , myDraw .plot2 Plot2
-                    , myDraw .plot3 Plot3
+                    [ myDraw lines1 .plot1 Plot1
+                    , myDraw lines2 .plot2 Plot2
+                    , myDraw lines3 .plot3 Plot3
                     ]
                 ]
             , column

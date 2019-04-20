@@ -83,10 +83,15 @@ defaultConfig points =
 draw :
     Float
     -> Float
+    -> Config data
     -> State data
     -> (Msg data -> msg)
     -> Element msg
-draw width height plotState toMsg =
+draw width height config state toMsg =
+    let
+        stateWithNewConfig =
+            { state | config = config }
+    in
     Element.map toMsg
         (Element.el
             [ Element.width Element.fill
@@ -94,8 +99,19 @@ draw width height plotState toMsg =
             ]
          <|
             Element.html
-                (chart plotState width height)
+                (chart stateWithNewConfig width height)
         )
+
+
+drawHtml :
+    Float
+    -> Float
+    -> Config data
+    -> State data
+    -> (Msg data -> msg)
+    -> Html msg
+drawHtml width height config state toMsg =
+    Element.layout [] <| draw width height config state toMsg
 
 
 timeConvert : Posix -> Float
