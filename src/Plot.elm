@@ -2,6 +2,7 @@ module Plot exposing
     ( Config
     , Msg
     , State
+    , defaultConfig
     , draw
     , init
     , update
@@ -62,6 +63,20 @@ type alias Config data =
     , labelFunc : data -> String
     , xLabel : String
     , yLabel : String
+    }
+
+
+defaultConfig : List Point -> Config Point
+defaultConfig points =
+    { lines = [ LineChart.line Colors.tealLight Dots.circle "" points ]
+    , xIsTime = False
+    , showLegends = False
+    , xAcc = .x
+    , yAcc = .y
+    , pointDecoder = \p -> p
+    , labelFunc = \p -> ""
+    , xLabel = ""
+    , yLabel = ""
     }
 
 

@@ -55,8 +55,7 @@ makeData func scale =
         pairToFoobar ( i, x ) =
             Foobar x (func x) (addStringValue i)
     in
-    List.map pairToFoobar
-        indexedValues
+    List.map pairToFoobar indexedValues
 
 
 cosData : List Foobar
