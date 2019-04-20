@@ -48,10 +48,10 @@ import TypedSvg.Core
 import TypedSvg.Types exposing (..)
 
 
-numberFormat : Locale -> Float -> String
-numberFormat locale number =
+defaultFormat : Float -> String
+defaultFormat number =
     NumberSuffix.format
-        { scientificConfig | locale = locale }
+        { scientificConfig | locale = usLocale }
         number
 
 
@@ -59,7 +59,7 @@ type alias Config data =
     { lines : List (Series data)
     , xIsTime : Bool
     , language : Language
-    , locale : Locale
+    , numberFormat : Float -> String
     , timezone : Time.Zone
     , showLegends : Bool
     , xAcc : data -> Float
@@ -91,7 +91,7 @@ defaultConfigWith dataList xAcc yAcc pointDecoder =
     { lines = [ LineChart.line Colors.tealLight Dots.circle "" dataList ]
     , xIsTime = False
     , language = english
-    , locale = usLocale
+    , numberFormat = defaultFormat
     , timezone = Time.utc
     , showLegends = False
     , xAcc = xAcc
@@ -118,7 +118,7 @@ pointDefaultConfig points =
     { lines = [ LineChart.line Colors.tealLight Dots.circle "" points ]
     , xIsTime = False
     , language = english
-    , locale = usLocale
+    , numberFormat = defaultFormat
     , timezone = Time.utc
     , showLegends = False
     , xAcc = .x
@@ -370,7 +370,7 @@ yAxisConfig height config state =
         , pixels = round height
         , range = setRange state.yZoom
         , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = Ticks.floatCustom 4 (customTick config.locale)
+        , ticks = Ticks.floatCustom 4 (customTick config.numberFormat)
         }
 
 
@@ -411,14 +411,14 @@ xTicksConfig config zoom =
                 List.map (customTimeTick config) (valuesWithin range)
 
     else
-        Ticks.floatCustom 7 (customTick config.locale)
+        Ticks.floatCustom 7 (customTick config.numberFormat)
 
 
-customTick : Locale -> Float -> Tick.Config msg
-customTick locale value =
+customTick : (Float -> String) -> Float -> Tick.Config msg
+customTick nrFormat value =
     let
         label =
-            Junk.label Colors.black (numberFormat locale value)
+            Junk.label Colors.black (nrFormat value)
     in
     Tick.custom
         { position = value
@@ -506,10 +506,10 @@ hoverJunk config hovered sys =
                     (Time.millisToPosix <| round (xAcc hovered))
 
             else
-                numberFormat config.locale (xAcc hovered)
+                config.numberFormat (xAcc hovered)
 
         textY =
-            numberFormat config.locale (yAcc hovered)
+            config.numberFormat (yAcc hovered)
 
         mySvgText : Float -> String -> Bool -> Svg (Msg data)
         mySvgText fontHeights str bigWhite =

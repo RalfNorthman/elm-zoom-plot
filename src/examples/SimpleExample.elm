@@ -15,6 +15,10 @@ points =
     , Point 13 120.5
     , Point 14 119.5
     , Point 15 121.5
+    , Point 16 120.5
+    , Point 17 121.5
+    , Point 18 120
+    , Point 19 118
     ]
 
 
