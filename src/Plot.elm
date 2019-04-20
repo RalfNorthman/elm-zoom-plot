@@ -114,11 +114,6 @@ drawHtml width height config state toMsg =
     Element.layout [] <| draw width height config state toMsg
 
 
-timeConvert : Posix -> Float
-timeConvert =
-    Time.posixToMillis >> toFloat
-
-
 
 ---- TIME PLOTTING STUFF ----
 

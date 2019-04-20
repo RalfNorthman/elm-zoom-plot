@@ -16,6 +16,7 @@ import LineChart.Coordinate
 import LineChart.Dots as Dots
 import Plot
 import Task exposing (Task)
+import Time exposing (Posix)
 
 
 
@@ -24,7 +25,7 @@ import Task exposing (Task)
 
 type alias Foobar =
     { foo : Float
-    , bar : Float
+    , bar : Posix
     , baz : String
     }
 
@@ -53,7 +54,7 @@ makeData func scale =
 
         pairToFoobar : ( Int, Float ) -> Foobar
         pairToFoobar ( i, x ) =
-            Foobar x (func x) (addStringValue i)
+            Foobar x (func x |> floor |> Time.millisToPosix) (addStringValue i)
     in
     List.map pairToFoobar indexedValues
 
@@ -112,7 +113,7 @@ plotConfig lines =
     { lines = lines
     , xIsTime = True
     , xAcc = .foo
-    , yAcc = .bar
+    , yAcc = .bar >> Time.posixToMillis >> toFloat
     , pointDecoder = pointDecoder
     , labelFunc = labelFunc
     , showLegends = False
@@ -123,11 +124,7 @@ plotConfig lines =
 
 pointDecoder : LineChart.Coordinate.Point -> Foobar
 pointDecoder { x, y } =
-    let
-        emptyFoobar =
-            Foobar 0 0 ""
-    in
-    { emptyFoobar | foo = x, bar = y }
+    Foobar x (y |> floor |> Time.millisToPosix) ""
 
 
 labelFunc : Foobar -> String
