@@ -1,6 +1,5 @@
 module Plot exposing
     ( Config
-    , Lines
     , Msg
     , State
     , draw
@@ -53,12 +52,8 @@ format number =
         number
 
 
-type alias Lines data =
-    List (Series data)
-
-
 type alias Config data =
-    { lines : Lines data
+    { lines : List (Series data)
     , xIsTime : Bool
     , showLegends : Bool
     , xAcc : data -> Float
