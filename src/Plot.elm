@@ -1,11 +1,11 @@
 module Plot exposing
-    ( Lines
-    , PlotConfig
-    , PlotMsg(..)
-    , PlotState
+    ( Config
+    , Lines
+    , Msg
+    , State
     , draw
-    , plotInit
-    , plotUpdate
+    , init
+    , update
     )
 
 import Color
@@ -57,7 +57,7 @@ type alias Lines data =
     List (Series data)
 
 
-type alias PlotConfig data =
+type alias Config data =
     { lines : Lines data
     , xIsTime : Bool
     , showLegends : Bool
@@ -73,8 +73,8 @@ type alias PlotConfig data =
 draw :
     Float
     -> Float
-    -> PlotState data
-    -> (PlotMsg data -> msg)
+    -> State data
+    -> (Msg data -> msg)
     -> Element msg
 draw width height plotState toMsg =
     Element.map toMsg
@@ -231,7 +231,7 @@ customFormatChange info =
 ---- CHART ----
 
 
-eventsConfig : PlotState data -> Events.Config data (PlotMsg data)
+eventsConfig : State data -> Events.Config data (Msg data)
 eventsConfig state =
     let
         myGetData : Events.Decoder data data
@@ -251,7 +251,7 @@ eventsConfig state =
         ]
 
 
-xAxisConfig : PlotState data -> Float -> Axis.Config data msg
+xAxisConfig : State data -> Float -> Axis.Config data msg
 xAxisConfig state width =
     Axis.custom
         { title = Title.default state.config.xLabel
@@ -263,7 +263,7 @@ xAxisConfig state width =
         }
 
 
-yAxisConfig : PlotState data -> Float -> Axis.Config data msg
+yAxisConfig : State data -> Float -> Axis.Config data msg
 yAxisConfig state height =
     let
         xOffset =
@@ -353,13 +353,13 @@ containerConfig =
             { top = 50
             , right = 110
             , bottom = 30
-            , left = 50
+            , left = 60
             }
         , id = "whatever"
         }
 
 
-dragBox : PlotState data -> data -> data -> Coordinate.System -> Svg msg
+dragBox : State data -> data -> data -> Coordinate.System -> Svg msg
 dragBox state a b system =
     let
         xAcc =
@@ -386,10 +386,10 @@ type Hover
 
 
 hoverJunk :
-    PlotState data
+    State data
     -> data
     -> Coordinate.System
-    -> Svg (PlotMsg data)
+    -> Svg (Msg data)
 hoverJunk state hovered sys =
     let
         xAcc =
@@ -423,7 +423,7 @@ hoverJunk state hovered sys =
         textY =
             format (yAcc hovered)
 
-        mySvgText : Float -> String -> Bool -> Svg (PlotMsg data)
+        mySvgText : Float -> String -> Bool -> Svg (Msg data)
         mySvgText fontHeights str bigWhite =
             let
                 attributes =
@@ -468,7 +468,7 @@ hoverJunk state hovered sys =
         svgList
 
 
-junkConfig : PlotState data -> Junk.Config data (PlotMsg data)
+junkConfig : State data -> Junk.Config data (Msg data)
 junkConfig state =
     case state.mouseDown of
         Nothing ->
@@ -542,10 +542,10 @@ dotsConfig hovered =
 
 
 chartConfig :
-    PlotState data
+    State data
     -> Float
     -> Float
-    -> Config data (PlotMsg data)
+    -> LineChart.Config data (Msg data)
 chartConfig state width height =
     { x = xAxisConfig state width
     , y = yAxisConfig state height
@@ -567,14 +567,14 @@ chartConfig state width height =
     }
 
 
-chart : PlotState data -> Float -> Float -> Svg (PlotMsg data)
+chart : State data -> Float -> Float -> Svg (Msg data)
 chart state width height =
     viewCustom
         (chartConfig state width height)
         state.config.lines
 
 
-type alias PlotState data =
+type alias State data =
     { mouseDown : Maybe data
     , rangeX : Maybe Range
     , rangeY : Maybe Range
@@ -583,22 +583,22 @@ type alias PlotState data =
     , hovered : Maybe data
     , moved : Maybe data
     , movedSinceMouseDown : Int
-    , config : PlotConfig data
+    , config : Config data
     }
 
 
-type PlotMsg data
+type Msg data
     = MouseDown data
     | MouseUp data
     | Hover (Maybe data)
     | Move data
     | MouseLeave
-    | UpdateConfig (PlotConfig data)
+    | UpdateConfig (Config data)
     | ResetZoom
 
 
-plotInit : PlotConfig data -> PlotState data
-plotInit config =
+init : Config data -> State data
+init config =
     { mouseDown = Nothing
     , rangeX = Nothing
     , rangeY = Nothing
@@ -616,7 +616,7 @@ type XY
     | Y
 
 
-newRange : PlotState data -> data -> XY -> ( Maybe Range, Zoom )
+newRange : State data -> data -> XY -> ( Maybe Range, Zoom )
 newRange state mouseUp xy =
     case state.mouseDown of
         Just a ->
@@ -650,7 +650,7 @@ newRange state mouseUp xy =
             ( Nothing, UnZoomed )
 
 
-zoomUpdate : PlotState data -> data -> PlotState data
+zoomUpdate : State data -> data -> State data
 zoomUpdate state point =
     let
         ( rx, xc ) =
@@ -669,8 +669,8 @@ zoomUpdate state point =
     }
 
 
-plotUpdate : PlotMsg data -> PlotState data -> PlotState data
-plotUpdate msg state =
+update : Msg data -> State data -> State data
+update msg state =
     case msg of
         MouseDown point ->
             case state.mouseDown of
