@@ -110,15 +110,24 @@ init =
 
 plotConfig : List (LineChart.Series Foobar) -> Plot.Config Foobar
 plotConfig lines =
-    { lines = lines
-    , xIsTime = True
-    , xAcc = .foo
-    , yAcc = .bar >> Time.posixToMillis >> toFloat
-    , pointDecoder = pointDecoder
-    , labelFunc = labelFunc
-    , showLegends = False
-    , xLabel = "Tid"
-    , yLabel = ""
+    let
+        default =
+            Plot.defaultConfigWith
+                []
+                .foo
+                (.bar >> Time.posixToMillis >> toFloat)
+                pointDecoder
+    in
+    { default
+        | lines = lines
+        , xIsTime = True
+        , labelFunc = labelFunc
+        , margin =
+            { top = 20
+            , right = 0
+            , bottom = 30
+            , left = 60
+            }
     }
 
 

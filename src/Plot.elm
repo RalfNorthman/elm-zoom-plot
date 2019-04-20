@@ -2,9 +2,10 @@ module Plot exposing
     ( Config
     , Msg
     , State
-    , defaultConfig
+    , defaultConfigWith
     , draw
     , init
+    , pointDefaultConfig
     , update
     )
 
@@ -61,22 +62,71 @@ type alias Config data =
     , yAcc : data -> Float
     , pointDecoder : Point -> data
     , labelFunc : data -> String
-    , xLabel : String
-    , yLabel : String
+    , xAxisLabel : String
+    , yAxisLabel : String
+    , margin :
+        { top : Float
+        , right : Float
+        , bottom : Float
+        , left : Float
+        }
+    , xAxisLabelOffsetX : Float
+    , xAxisLabelOffsetY : Float
+    , yAxisLabelOffsetX : Float
+    , yAxisLabelOffsetY : Float
     }
 
 
-defaultConfig : List Point -> Config Point
-defaultConfig points =
+defaultConfigWith :
+    List data
+    -> (data -> Float)
+    -> (data -> Float)
+    -> (Point -> data)
+    -> Config data
+defaultConfigWith dataList xAcc yAcc pointDecoder =
+    { lines = [ LineChart.line Colors.tealLight Dots.circle "" dataList ]
+    , xIsTime = False
+    , showLegends = False
+    , xAcc = xAcc
+    , yAcc = yAcc
+    , pointDecoder = pointDecoder
+    , labelFunc = \_ -> ""
+    , xAxisLabel = ""
+    , yAxisLabel = ""
+    , margin =
+        { top = 20
+        , right = 30
+        , bottom = 30
+        , left = 60
+        }
+    , xAxisLabelOffsetX = 0
+    , xAxisLabelOffsetY = 0
+    , yAxisLabelOffsetX = 0
+    , yAxisLabelOffsetY = 0
+    }
+
+
+pointDefaultConfig : List Point -> Config Point
+pointDefaultConfig points =
     { lines = [ LineChart.line Colors.tealLight Dots.circle "" points ]
     , xIsTime = False
     , showLegends = False
     , xAcc = .x
     , yAcc = .y
     , pointDecoder = \p -> p
-    , labelFunc = \p -> ""
-    , xLabel = ""
-    , yLabel = ""
+    , labelFunc = \_ -> ""
+    , xAxisLabel = ""
+    , yAxisLabel = ""
+    , margin =
+        { top = 20
+        , right = 30
+        , bottom = 30
+        , left = 60
+        }
+    , xAxisLabelOffsetX = 0
+    , xAxisLabelOffsetY = 0
+    , yAxisLabelOffsetX = 0
+    , yAxisLabelOffsetY = 0
     }
 
 
@@ -275,7 +325,11 @@ eventsConfig state =
 xAxisConfig : State data -> Float -> Axis.Config data msg
 xAxisConfig state width =
     Axis.custom
-        { title = Title.default state.config.xLabel
+        { title =
+            Title.atAxisMax
+                state.config.xAxisLabelOffsetX
+                state.config.xAxisLabelOffsetY
+                state.config.xAxisLabel
         , variable = Just << state.config.xAcc
         , pixels = round width
         , range = setRange state.xZoom
@@ -286,14 +340,12 @@ xAxisConfig state width =
 
 yAxisConfig : State data -> Float -> Axis.Config data msg
 yAxisConfig state height =
-    let
-        xOffset =
-            5
-                * String.length state.config.yLabel
-                |> toFloat
-    in
     Axis.custom
-        { title = Title.atAxisMax xOffset 0 state.config.yLabel
+        { title =
+            Title.atAxisMax
+                state.config.yAxisLabelOffsetX
+                state.config.yAxisLabelOffsetY
+                state.config.yAxisLabel
         , variable = Just << state.config.yAcc
         , pixels = round height
         , range = setRange state.yZoom
@@ -364,18 +416,13 @@ fontSize =
     14
 
 
-containerConfig : Container.Config msg
-containerConfig =
+containerConfig : State data -> Container.Config msg
+containerConfig state =
     Container.custom
         { attributesHtml = []
         , attributesSvg = [ SvgAttrPx.fontSize fontSize ]
         , size = Container.relative
-        , margin =
-            { top = 50
-            , right = 110
-            , bottom = 30
-            , left = 60
-            }
+        , margin = state.config.margin
         , id = "whatever"
         }
 
@@ -570,7 +617,7 @@ chartConfig :
 chartConfig state width height =
     { x = xAxisConfig state width
     , y = yAxisConfig state height
-    , container = containerConfig
+    , container = containerConfig state
     , interpolation = Interpolation.default
     , intersection = Intersection.default
     , legends =
