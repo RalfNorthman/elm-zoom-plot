@@ -23,7 +23,7 @@ import Time exposing (Posix)
 
 
 
----- TEST-DATA ----
+---- Example type for the data we're going to plot ----
 
 
 type alias Foobar =
@@ -31,66 +31,6 @@ type alias Foobar =
     , bar : Float
     , baz : String
     }
-
-
-makeData : (Float -> Float) -> Float -> List Foobar
-makeData func scale =
-    let
-        indexedValues : List ( Int, Float )
-        indexedValues =
-            List.indexedMap
-                (\i x -> Tuple.pair i (toFloat x * scale))
-            <|
-                List.range -221 65
-
-        addStringValue : Int -> String
-        addStringValue index =
-            case modBy 3 index of
-                0 ->
-                    "Wichita Vortex"
-
-                1 ->
-                    "KxKc 3"
-
-                _ ->
-                    "Bolobooz"
-
-        pairToFoobar : ( Int, Float ) -> Foobar
-        pairToFoobar ( i, x ) =
-            Foobar
-                (x
-                    |> floor
-                    |> Time.millisToPosix
-                )
-                (func <| x / scale)
-                (addStringValue i)
-    in
-    List.map pairToFoobar indexedValues
-
-
-polySinData : List Foobar
-polySinData =
-    makeData (\x -> 0.005 * x ^ 2 - 0.2 * x - 0.5 + 10 * sin x)
-        100000
-
-
-polyData : List Foobar
-polyData =
-    makeData (\x -> 0.00006 * x ^ 3 + 0.013 * x ^ 2 - 0.1 * x - 0.5)
-        200000
-
-
-poly3xSinData : List Foobar
-poly3xSinData =
-    makeData
-        (\x -> 0.03 * x ^ 2 - 0.5 * x - 3.5 + 50 * sin (3 * x))
-        10000000
-
-
-cosData : List Foobar
-cosData =
-    makeData (\x -> 1000 + 100 * cos (x / 3))
-        100000000
 
 
 
@@ -356,3 +296,67 @@ main =
         , update = update
         , subscriptions = subscriptions
         }
+
+
+
+---- TEST-DATA ----
+
+
+makeData : (Float -> Float) -> Float -> List Foobar
+makeData func scale =
+    let
+        indexedValues : List ( Int, Float )
+        indexedValues =
+            List.indexedMap
+                (\i x -> Tuple.pair i (toFloat x * scale))
+            <|
+                List.range -221 65
+
+        addStringValue : Int -> String
+        addStringValue index =
+            case modBy 3 index of
+                0 ->
+                    "Wichita Vortex"
+
+                1 ->
+                    "KxKc 3"
+
+                _ ->
+                    "Bolobooz"
+
+        pairToFoobar : ( Int, Float ) -> Foobar
+        pairToFoobar ( i, x ) =
+            Foobar
+                (x
+                    |> floor
+                    |> Time.millisToPosix
+                )
+                (func <| x / scale)
+                (addStringValue i)
+    in
+    List.map pairToFoobar indexedValues
+
+
+polySinData : List Foobar
+polySinData =
+    makeData (\x -> 0.005 * x ^ 2 - 0.2 * x - 0.5 + 10 * sin x)
+        100000
+
+
+polyData : List Foobar
+polyData =
+    makeData (\x -> 0.00006 * x ^ 3 + 0.013 * x ^ 2 - 0.1 * x - 0.5)
+        200000
+
+
+poly3xSinData : List Foobar
+poly3xSinData =
+    makeData
+        (\x -> 0.03 * x ^ 2 - 0.5 * x - 3.5 + 50 * sin (3 * x))
+        10000000
+
+
+cosData : List Foobar
+cosData =
+    makeData (\x -> 1000 + 100 * cos (x / 3))
+        100000000
