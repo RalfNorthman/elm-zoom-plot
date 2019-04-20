@@ -24,8 +24,8 @@ import Time exposing (Posix)
 
 
 type alias Foobar =
-    { foo : Float
-    , bar : Posix
+    { foo : Posix
+    , bar : Float
     , baz : String
     }
 
@@ -36,7 +36,7 @@ makeData func scale =
         indexedValues : List ( Int, Float )
         indexedValues =
             List.indexedMap
-                (\i x -> Tuple.pair i (101001000 + toFloat x * scale))
+                (\i x -> Tuple.pair i (toFloat x * scale))
             <|
                 List.range -221 65
 
@@ -54,33 +54,40 @@ makeData func scale =
 
         pairToFoobar : ( Int, Float ) -> Foobar
         pairToFoobar ( i, x ) =
-            Foobar x (func x |> floor |> Time.millisToPosix) (addStringValue i)
+            Foobar
+                (x
+                    |> floor
+                    |> Time.millisToPosix
+                )
+                (func <| x / scale)
+                (addStringValue i)
     in
     List.map pairToFoobar indexedValues
 
 
-cosData : List Foobar
-cosData =
-    makeData cos 100000000
+polySinData : List Foobar
+polySinData =
+    makeData (\x -> 0.005 * x ^ 2 - 0.2 * x - 0.5 + 10 * sin x)
+        100000
 
 
 polyData : List Foobar
 polyData =
-    makeData (\x -> 0.01 * x * x - 0.1 * x - 0.5)
+    makeData (\x -> 0.00006 * x ^ 3 + 0.013 * x ^ 2 - 0.1 * x - 0.5)
         200000
-
-
-polySinData : List Foobar
-polySinData =
-    makeData (\x -> 0.01 * x ^ 2 - 0.1 * x - 0.5 + sin x)
-        20000
 
 
 poly3xSinData : List Foobar
 poly3xSinData =
     makeData
-        (\x -> 0.03 * x ^ 2 - 0.5 * x - 3.5 + 5 * sin (3 * x))
+        (\x -> 0.03 * x ^ 2 - 0.5 * x - 3.5 + 50 * sin (3 * x))
         10000000
+
+
+cosData : List Foobar
+cosData =
+    makeData (\x -> 1000 + 100 * cos (x / 3))
+        100000000
 
 
 
@@ -114,8 +121,8 @@ plotConfig lines =
         default =
             Plot.defaultConfigWith
                 []
-                .foo
-                (.bar >> Time.posixToMillis >> toFloat)
+                (.foo >> Time.posixToMillis >> toFloat)
+                .bar
                 pointDecoder
     in
     { default
@@ -133,7 +140,7 @@ plotConfig lines =
 
 pointDecoder : LineChart.Coordinate.Point -> Foobar
 pointDecoder { x, y } =
-    Foobar x (y |> floor |> Time.millisToPosix) ""
+    Foobar (x |> floor |> Time.millisToPosix) y ""
 
 
 labelFunc : Foobar -> String
