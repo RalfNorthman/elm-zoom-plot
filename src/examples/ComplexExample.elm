@@ -12,6 +12,7 @@ import Html exposing (Html)
 import Html.Attributes
 import LineChart
 import LineChart.Colors as Colors
+import LineChart.Coordinate
 import LineChart.Dots as Dots
 import Plot exposing (..)
 import Task exposing (Task)
@@ -28,22 +29,18 @@ type alias Foobar =
     }
 
 
-type alias Point =
-    { x : Float, y : Float }
-
-
 makeData : (Float -> Float) -> Float -> List Foobar
 makeData func scale =
     let
-        xs : List ( Int, Float )
-        xs =
+        indexedValues : List ( Int, Float )
+        indexedValues =
             List.indexedMap
                 (\i x -> Tuple.pair i (101001000 + toFloat x * scale))
             <|
                 List.range -221 65
 
-        bazMaker : Int -> String
-        bazMaker index =
+        addStringValue : Int -> String
+        addStringValue index =
             case modBy 3 index of
                 0 ->
                     "Wichita Vortex"
@@ -53,14 +50,13 @@ makeData func scale =
 
                 _ ->
                     "Bolobooz"
+
+        pairToFoobar : ( Int, Float ) -> Foobar
+        pairToFoobar ( i, x ) =
+            Foobar x (func x) (addStringValue i)
     in
-    List.map (\( i, x ) -> Foobar x (func x) <| bazMaker i) xs
-
-
-expData : List Foobar
-expData =
-    makeData (\x -> 0.01 ^ (0.04 * x) + 3.5 * sin (2 * x))
-        10000
+    List.map pairToFoobar
+        indexedValues
 
 
 cosData : List Foobar
@@ -126,7 +122,7 @@ plotConfig lines =
     }
 
 
-pointDecoder : Point -> Foobar
+pointDecoder : LineChart.Coordinate.Point -> Foobar
 pointDecoder { x, y } =
     let
         emptyFoobar =
@@ -218,15 +214,10 @@ updatePlotDimensions model width height =
 
 
 ---- VIEW ----
--- myLine : Colors.Color -> Dots.Shape -> String -> List Foobar -> Line
 
 
 myLine color shape title data =
     LineChart.line color shape title data
-
-
-
--- myLine Colors.blueLight Dots.triangle "exp" data1
 
 
 lines1 : List (LineChart.Series Foobar)
