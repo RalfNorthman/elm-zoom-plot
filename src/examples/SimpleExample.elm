@@ -10,11 +10,11 @@ type alias Point =
 
 
 points =
-    [ Point 1 0
-    , Point 2 1
-    , Point 3 0.5
-    , Point 4 -0.5
-    , Point 4 2.5
+    [ Point 11 120
+    , Point 12 121
+    , Point 13 120.5
+    , Point 14 119.5
+    , Point 15 121.5
     ]
 
 
@@ -31,17 +31,24 @@ type Msg
     = MyPlotMsg (Plot.Msg Point)
 
 
+update : Msg -> Model -> Model
 update msg model =
     case msg of
         MyPlotMsg plotMsg ->
-            Plot.update plotMsg model.plotState
+            { model
+                | plotState = Plot.update myConfig plotMsg model.plotState
+            }
+
+
+myConfig =
+    Plot.pointDefaultConfig points
 
 
 view : Model -> Html Msg
 view model =
-    Plot.drawHtml 500
-        500
-        (Plot.pointDefaultConfig points)
+    Plot.drawHtml 800
+        600
+        myConfig
         model.plotState
         MyPlotMsg
 

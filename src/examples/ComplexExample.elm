@@ -105,9 +105,9 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { plot1 = Plot.init <| plotConfig lines1
-      , plot2 = Plot.init <| plotConfig lines2
-      , plot3 = Plot.init <| plotConfig lines3
+    ( { plot1 = Plot.init
+      , plot2 = Plot.init
+      , plot3 = Plot.init
       , plotWidth = 0
       , plotHeight = 0
       }
@@ -174,17 +174,17 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ToPlot Plot1 plotMsg ->
-            ( { model | plot1 = Plot.update plotMsg model.plot1 }
+            ( { model | plot1 = Plot.update (plotConfig lines1) plotMsg model.plot1 }
             , Cmd.none
             )
 
         ToPlot Plot2 plotMsg ->
-            ( { model | plot2 = Plot.update plotMsg model.plot2 }
+            ( { model | plot2 = Plot.update (plotConfig lines2) plotMsg model.plot2 }
             , Cmd.none
             )
 
         ToPlot Plot3 plotMsg ->
-            ( { model | plot3 = Plot.update plotMsg model.plot3 }
+            ( { model | plot3 = Plot.update (plotConfig lines3) plotMsg model.plot3 }
             , Cmd.none
             )
 
