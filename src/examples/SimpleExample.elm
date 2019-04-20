@@ -22,6 +22,7 @@ type alias Model =
     { plotState : Plot.State Point }
 
 
+init : Model
 init =
     { plotState = Plot.init }
 

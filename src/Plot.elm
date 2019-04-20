@@ -139,10 +139,6 @@ draw :
     -> (Msg data -> msg)
     -> Element msg
 draw width height config state toMsg =
-    let
-        stateWithNewConfig =
-            { state | config = config }
-    in
     Element.map toMsg
         (Element.el
             [ Element.width Element.fill
@@ -150,7 +146,7 @@ draw width height config state toMsg =
             ]
          <|
             Element.html
-                (chart stateWithNewConfig width height)
+                (chart width height config state)
         )
 
 
@@ -303,12 +299,12 @@ customFormatChange info =
 ---- CHART ----
 
 
-eventsConfig : State data -> Events.Config data (Msg data)
-eventsConfig state =
+eventsConfig : Config data -> State data -> Events.Config data (Msg data)
+eventsConfig config state =
     let
         myGetData : Events.Decoder data data
         myGetData =
-            Events.map state.config.pointDecoder Events.getData
+            Events.map config.pointDecoder Events.getData
     in
     Events.custom
         [ Events.onMouseDown MouseDown myGetData
@@ -323,31 +319,31 @@ eventsConfig state =
         ]
 
 
-xAxisConfig : State data -> Float -> Axis.Config data msg
-xAxisConfig state width =
+xAxisConfig : Float -> Config data -> State data -> Axis.Config data msg
+xAxisConfig width config state =
     Axis.custom
         { title =
             Title.atAxisMax
-                state.config.xAxisLabelOffsetX
-                state.config.xAxisLabelOffsetY
-                state.config.xAxisLabel
-        , variable = Just << state.config.xAcc
+                config.xAxisLabelOffsetX
+                config.xAxisLabelOffsetY
+                config.xAxisLabel
+        , variable = Just << config.xAcc
         , pixels = round width
         , range = setRange state.xZoom
         , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = xTicksConfig state.config.xIsTime state.xZoom
+        , ticks = xTicksConfig config.xIsTime state.xZoom
         }
 
 
-yAxisConfig : State data -> Float -> Axis.Config data msg
-yAxisConfig state height =
+yAxisConfig : Float -> Config data -> State data -> Axis.Config data msg
+yAxisConfig height config state =
     Axis.custom
         { title =
             Title.atAxisMax
-                state.config.yAxisLabelOffsetX
-                state.config.yAxisLabelOffsetY
-                state.config.yAxisLabel
-        , variable = Just << state.config.yAcc
+                config.yAxisLabelOffsetX
+                config.yAxisLabelOffsetY
+                config.yAxisLabel
+        , variable = Just << config.yAcc
         , pixels = round height
         , range = setRange state.yZoom
         , axisLine = AxisLine.rangeFrame Colors.black
@@ -417,32 +413,28 @@ fontSize =
     14
 
 
-containerConfig : State data -> Container.Config msg
-containerConfig state =
+containerConfig : Config data -> Container.Config msg
+containerConfig config =
     Container.custom
         { attributesHtml = []
         , attributesSvg = [ SvgAttrPx.fontSize fontSize ]
         , size = Container.relative
-        , margin = state.config.margin
+        , margin = config.margin
         , id = "whatever"
         }
 
 
-dragBox : State data -> data -> data -> Coordinate.System -> Svg msg
-dragBox state a b system =
+dragBox : Config data -> data -> data -> Coordinate.System -> Svg msg
+dragBox config a b system =
     let
         xAcc =
-            state.config.xAcc
+            config.xAcc
 
         yAcc =
-            state.config.yAcc
+            config.yAcc
     in
     Junk.rectangle system
-        [ SvgAttr.fill <| Fill Colors.grayLightest
-        , SvgAttr.stroke Colors.grayLight
-        , SvgAttrPx.strokeWidth 1
-        , SvgAttr.strokeDasharray "3 3"
-        ]
+        [ SvgAttr.fill <| Fill Colors.grayLightest ]
         (min (xAcc a) (xAcc b))
         (max (xAcc a) (xAcc b))
         (min (yAcc a) (yAcc b))
@@ -455,23 +447,23 @@ type Hover
 
 
 hoverJunk :
-    State data
+    Config data
     -> data
     -> Coordinate.System
     -> Svg (Msg data)
-hoverJunk state hovered sys =
+hoverJunk config hovered sys =
     let
         xAcc =
-            state.config.xAcc
+            config.xAcc
 
         yAcc =
-            state.config.yAcc
+            config.yAcc
 
         xIsTime =
-            state.config.xIsTime
+            config.xIsTime
 
         customLabel =
-            state.config.labelFunc hovered
+            config.labelFunc hovered
 
         textDate =
             if xIsTime then
@@ -537,8 +529,8 @@ hoverJunk state hovered sys =
         svgList
 
 
-junkConfig : State data -> Junk.Config data (Msg data)
-junkConfig state =
+junkConfig : Config data -> State data -> Junk.Config data (Msg data)
+junkConfig config state =
     case state.mouseDown of
         Nothing ->
             case state.hovered of
@@ -551,7 +543,7 @@ junkConfig state =
                             { below = []
                             , above =
                                 [ hoverJunk
-                                    state
+                                    config
                                     hovered
                                     sys
                                 ]
@@ -569,7 +561,7 @@ junkConfig state =
                         (\sys ->
                             { below =
                                 [ dragBox
-                                    state
+                                    config
                                     downPoint
                                     movedPoint
                                     sys
@@ -611,24 +603,25 @@ dotsConfig hovered =
 
 
 chartConfig :
-    State data
+    Float
     -> Float
-    -> Float
+    -> Config data
+    -> State data
     -> LineChart.Config data (Msg data)
-chartConfig state width height =
-    { x = xAxisConfig state width
-    , y = yAxisConfig state height
-    , container = containerConfig state
+chartConfig width height config state =
+    { x = xAxisConfig width config state
+    , y = yAxisConfig height config state
+    , container = containerConfig config
     , interpolation = Interpolation.default
     , intersection = Intersection.default
     , legends =
-        if state.config.showLegends then
+        if config.showLegends then
             Legends.default
 
         else
             Legends.none
-    , events = eventsConfig state
-    , junk = junkConfig state
+    , events = eventsConfig config state
+    , junk = junkConfig config state
     , grid = Grid.default
     , area = Area.default
     , line = Line.default
@@ -636,11 +629,11 @@ chartConfig state width height =
     }
 
 
-chart : State data -> Float -> Float -> Svg (Msg data)
-chart state width height =
+chart : Float -> Float -> Config data -> State data -> Svg (Msg data)
+chart width height config state =
     viewCustom
-        (chartConfig state width height)
-        state.config.lines
+        (chartConfig width height config state)
+        config.lines
 
 
 type alias State data =
@@ -652,7 +645,6 @@ type alias State data =
     , hovered : Maybe data
     , moved : Maybe data
     , movedSinceMouseDown : Int
-    , config : Config data
     }
 
 
@@ -662,12 +654,11 @@ type Msg data
     | Hover (Maybe data)
     | Move data
     | MouseLeave
-    | UpdateConfig (Config data)
     | ResetZoom
 
 
-init : Config data -> State data
-init config =
+init : State data
+init =
     { mouseDown = Nothing
     , rangeX = Nothing
     , rangeY = Nothing
@@ -676,7 +667,6 @@ init config =
     , hovered = Nothing
     , moved = Nothing
     , movedSinceMouseDown = 0
-    , config = config
     }
 
 
@@ -685,8 +675,8 @@ type XY
     | Y
 
 
-newRange : State data -> data -> XY -> ( Maybe Range, Zoom )
-newRange state mouseUp xy =
+newRange : Config data -> State data -> data -> XY -> ( Maybe Range, Zoom )
+newRange config state mouseUp xy =
     case state.mouseDown of
         Just a ->
             let
@@ -696,10 +686,10 @@ newRange state mouseUp xy =
                 acc =
                     case xy of
                         X ->
-                            state.config.xAcc
+                            config.xAcc
 
                         Y ->
-                            state.config.yAcc
+                            config.yAcc
 
                 zoomMin =
                     min (acc a) (acc b)
@@ -719,14 +709,14 @@ newRange state mouseUp xy =
             ( Nothing, UnZoomed )
 
 
-zoomUpdate : State data -> data -> State data
-zoomUpdate state point =
+zoomUpdate : Config data -> State data -> data -> State data
+zoomUpdate config state point =
     let
         ( rx, xc ) =
-            newRange state point X
+            newRange config state point X
 
         ( ry, yc ) =
-            newRange state point Y
+            newRange config state point Y
     in
     { state
         | xZoom = xc
@@ -738,8 +728,8 @@ zoomUpdate state point =
     }
 
 
-update : Msg data -> State data -> State data
-update msg state =
+update : Config data -> Msg data -> State data -> State data
+update config msg state =
     case msg of
         MouseDown point ->
             case state.mouseDown of
@@ -751,12 +741,12 @@ update msg state =
                     }
 
                 Just oldPoint ->
-                    zoomUpdate state point
+                    zoomUpdate config state point
 
         MouseUp point ->
             case state.mouseDown of
                 Just _ ->
-                    zoomUpdate state point
+                    zoomUpdate config state point
 
                 Nothing ->
                     state
@@ -781,9 +771,6 @@ update msg state =
 
         MouseLeave ->
             { state | hovered = Nothing }
-
-        UpdateConfig newConfig ->
-            { state | config = newConfig }
 
         ResetZoom ->
             { state
