@@ -12,9 +12,9 @@ module Plot exposing
 
 import Color
 import DateFormat as Format
-import DateFormat.Language exposing (swedish)
+import DateFormat.Language exposing (Language, english)
 import Element exposing (Element)
-import FormatNumber.Locales exposing (frenchLocale)
+import FormatNumber.Locales exposing (Locale, usLocale)
 import Html exposing (Html)
 import Html.Attributes exposing (style)
 import LineChart exposing (..)
@@ -37,7 +37,7 @@ import LineChart.Interpolation as Interpolation
 import LineChart.Junk as Junk
 import LineChart.Legends as Legends
 import LineChart.Line as Line
-import NumberSuffix exposing (format, scientificConfig)
+import NumberSuffix exposing (scientificConfig)
 import Svg exposing (Svg)
 import Time exposing (Posix)
 import TimeHelpers exposing (..)
@@ -48,16 +48,19 @@ import TypedSvg.Core
 import TypedSvg.Types exposing (..)
 
 
-format : Float -> String
-format number =
+numberFormat : Locale -> Float -> String
+numberFormat locale number =
     NumberSuffix.format
-        { scientificConfig | locale = frenchLocale }
+        { scientificConfig | locale = locale }
         number
 
 
 type alias Config data =
     { lines : List (Series data)
     , xIsTime : Bool
+    , language : Language
+    , locale : Locale
+    , timezone : Time.Zone
     , showLegends : Bool
     , xAcc : data -> Float
     , yAcc : data -> Float
@@ -87,6 +90,9 @@ defaultConfigWith :
 defaultConfigWith dataList xAcc yAcc pointDecoder =
     { lines = [ LineChart.line Colors.tealLight Dots.circle "" dataList ]
     , xIsTime = False
+    , language = english
+    , locale = usLocale
+    , timezone = Time.utc
     , showLegends = False
     , xAcc = xAcc
     , yAcc = yAcc
@@ -111,6 +117,9 @@ pointDefaultConfig : List Point -> Config Point
 pointDefaultConfig points =
     { lines = [ LineChart.line Colors.tealLight Dots.circle "" points ]
     , xIsTime = False
+    , language = english
+    , locale = usLocale
+    , timezone = Time.utc
     , showLegends = False
     , xAcc = .x
     , yAcc = .y
@@ -165,11 +174,11 @@ drawHtml width height config state toMsg =
 ---- TIME PLOTTING STUFF ----
 
 
-customTimeTick : Tick.Time -> Tick.Config msg
-customTimeTick info =
+customTimeTick : Config data -> Tick.Time -> Tick.Config msg
+customTimeTick config info =
     let
         label =
-            customFormatRouter info
+            customFormatRouter config info
     in
     Tick.custom
         { position = toFloat (Time.posixToMillis info.timestamp)
@@ -182,114 +191,128 @@ customTimeTick info =
         }
 
 
-customFormatRouter : Tick.Time -> String
-customFormatRouter info =
+customFormatRouter : Config data -> Tick.Time -> String
+customFormatRouter config info =
     case ( info.isFirst, info.change ) of
         ( True, _ ) ->
-            customFormatFirst info
+            customFormatFirst config info
 
         ( _, Just _ ) ->
-            customFormatChange info
+            customFormatChange config info
 
         _ ->
-            customFormat info
+            customFormat config info
 
 
-customFormatFirst : Tick.Time -> String
-customFormatFirst info =
+customFormatFirst : Config data -> Tick.Time -> String
+customFormatFirst { language, timezone } info =
     case ( info.timestamp, info.interval.unit ) of
         ( time, Tick.Millisecond ) ->
-            posixToTimeWithSeconds time
-                ++ sweFormat
+            posixToTimeWithSeconds language timezone time
+                ++ format
                     [ Format.text "."
                     , Format.millisecondFixed
                     ]
+                    language
+                    timezone
                     time
 
         ( time, Tick.Second ) ->
-            posixToTimeWithSeconds time
+            posixToTimeWithSeconds language timezone time
 
         ( time, Tick.Minute ) ->
-            posixToTime time
+            posixToTime language timezone time
 
         ( time, Tick.Hour ) ->
-            posixToNameDate time
+            posixToNameDate language timezone time
                 ++ " "
-                ++ posixToTime time
+                ++ posixToTime language timezone time
 
         ( time, Tick.Day ) ->
-            posixToNameDate time
+            posixToNameDate language timezone time
 
         ( time, Tick.Month ) ->
-            posixToMonthNameYear time
+            posixToMonthNameYear language timezone time
 
         ( time, Tick.Year ) ->
-            sweFormat
+            format
                 [ Format.yearNumber ]
+                language
+                timezone
                 time
 
 
-customFormat : Tick.Time -> String
-customFormat info =
+customFormat : Config data -> Tick.Time -> String
+customFormat { language, timezone } info =
     case ( info.timestamp, info.interval.unit ) of
         ( time, Tick.Millisecond ) ->
-            sweFormat
+            format
                 [ Format.text "."
                 , Format.millisecondFixed
                 ]
+                language
+                timezone
                 time
 
         ( time, Tick.Second ) ->
-            sweFormat
+            format
                 [ Format.text ":"
                 , Format.secondFixed
                 ]
+                language
+                timezone
                 time
 
         ( time, Tick.Minute ) ->
-            sweFormat
+            format
                 [ Format.text ":"
                 , Format.minuteFixed
                 ]
+                language
+                timezone
                 time
 
         ( time, Tick.Hour ) ->
-            posixToTime time
+            posixToTime language timezone time
 
         ( time, Tick.Day ) ->
-            posixToNameDate time
+            posixToNameDate language timezone time
 
         ( time, Tick.Month ) ->
-            sweFormat
+            format
                 [ Format.monthNameAbbreviated ]
+                language
+                timezone
                 time
 
         ( time, Tick.Year ) ->
-            sweFormat
+            format
                 [ Format.yearNumber ]
+                language
+                timezone
                 time
 
 
-customFormatChange : Tick.Time -> String
-customFormatChange info =
+customFormatChange : Config data -> Tick.Time -> String
+customFormatChange { language, timezone } info =
     case ( info.timestamp, info.interval.unit ) of
         ( time, Tick.Millisecond ) ->
-            posixToTimeWithSeconds time
+            posixToTimeWithSeconds language timezone time
 
         ( time, Tick.Second ) ->
-            posixToTime time
+            posixToTime language timezone time
 
         ( time, Tick.Minute ) ->
-            posixToTime time
+            posixToTime language timezone time
 
         ( time, Tick.Hour ) ->
-            posixToNameDate time
+            posixToNameDate language timezone time
 
         ( time, Tick.Day ) ->
-            posixToNameDate time
+            posixToNameDate language timezone time
 
         ( time, Tick.Month ) ->
-            posixToMonthNameYear time
+            posixToMonthNameYear language timezone time
 
         ( time, Tick.Year ) ->
             "huh"
@@ -331,7 +354,7 @@ xAxisConfig width config state =
         , pixels = round width
         , range = setRange state.xZoom
         , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = xTicksConfig config.xIsTime state.xZoom
+        , ticks = xTicksConfig config state.xZoom
         }
 
 
@@ -347,7 +370,7 @@ yAxisConfig height config state =
         , pixels = round height
         , range = setRange state.yZoom
         , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = Ticks.floatCustom 4 customTick
+        , ticks = Ticks.floatCustom 4 (customTick config.locale)
         }
 
 
@@ -371,9 +394,9 @@ valuesWithin =
     Values.time Time.utc 5
 
 
-xTicksConfig : Bool -> Zoom -> Ticks.Config msg
-xTicksConfig xIsTime zoom =
-    if xIsTime then
+xTicksConfig : Config data -> Zoom -> Ticks.Config msg
+xTicksConfig config zoom =
+    if config.xIsTime then
         Ticks.custom <|
             \dataRange axisRange ->
                 let
@@ -385,17 +408,17 @@ xTicksConfig xIsTime zoom =
                             Zoomed _ _ ->
                                 axisRange
                 in
-                List.map customTimeTick (valuesWithin range)
+                List.map (customTimeTick config) (valuesWithin range)
 
     else
-        Ticks.floatCustom 7 customTick
+        Ticks.floatCustom 7 (customTick config.locale)
 
 
-customTick : Float -> Tick.Config msg
-customTick value =
+customTick : Locale -> Float -> Tick.Config msg
+customTick locale value =
     let
         label =
-            Junk.label Colors.black (format value)
+            Junk.label Colors.black (numberFormat locale value)
     in
     Tick.custom
         { position = value
@@ -468,6 +491,8 @@ hoverJunk config hovered sys =
         textDate =
             if xIsTime then
                 TimeHelpers.posixToDate
+                    config.language
+                    config.timezone
                     (Time.millisToPosix <| round (xAcc hovered))
 
             else
@@ -476,13 +501,15 @@ hoverJunk config hovered sys =
         textX =
             if xIsTime then
                 TimeHelpers.posixToTimeWithSeconds
+                    config.language
+                    config.timezone
                     (Time.millisToPosix <| round (xAcc hovered))
 
             else
-                format (xAcc hovered)
+                numberFormat config.locale (xAcc hovered)
 
         textY =
-            format (yAcc hovered)
+            numberFormat config.locale (yAcc hovered)
 
         mySvgText : Float -> String -> Bool -> Svg (Msg data)
         mySvgText fontHeights str bigWhite =

@@ -1,7 +1,7 @@
-module TimeHelpers exposing (duration, posixToDate, posixToHumanString, posixToMonthNameYear, posixToNameDate, posixToString, posixToTime, posixToTimeWithSeconds, posixToUrlString, sweFormat)
+module TimeHelpers exposing (duration, format, posixToDate, posixToHumanString, posixToMonthNameYear, posixToNameDate, posixToString, posixToTime, posixToTimeWithSeconds, posixToUrlString)
 
 import DateFormat as Format
-import DateFormat.Language exposing (swedish)
+import DateFormat.Language exposing (Language, english)
 import Parser
 import Time exposing (Posix, utc)
 
@@ -31,68 +31,83 @@ duration from to =
         String.fromInt hours ++ " timmar"
 
 
-sweFormat : List Format.Token -> Posix -> String
-sweFormat tokens posix =
-    Format.formatWithLanguage swedish tokens utc posix
+format :
+    List Format.Token
+    -> Language
+    -> Time.Zone
+    -> Posix
+    -> String
+format tokens language tz posix =
+    Format.formatWithLanguage language tokens tz posix
 
 
-posixToDate : Posix -> String
-posixToDate posix =
-    sweFormat
+posixToDate : Language -> Time.Zone -> Posix -> String
+posixToDate language tz posix =
+    format
         [ Format.yearNumber
         , Format.text "-"
         , Format.monthFixed
         , Format.text "-"
         , Format.dayOfMonthFixed
         ]
+        language
+        tz
         posix
 
 
-posixToNameDate : Posix -> String
-posixToNameDate posix =
-    sweFormat
+posixToNameDate : Language -> Time.Zone -> Posix -> String
+posixToNameDate language tz posix =
+    format
         [ Format.dayOfMonthNumber
         , Format.text " "
         , Format.monthNameAbbreviated
         ]
+        language
+        tz
         posix
 
 
-posixToMonthNameYear : Posix -> String
-posixToMonthNameYear posix =
-    sweFormat
+posixToMonthNameYear : Language -> Time.Zone -> Posix -> String
+posixToMonthNameYear language tz posix =
+    format
         [ Format.monthNameAbbreviated
         , Format.text " "
         , Format.yearNumber
         ]
+        language
+        tz
         posix
 
 
-posixToTime : Posix -> String
-posixToTime posix =
-    sweFormat
+posixToTime : Language -> Time.Zone -> Posix -> String
+posixToTime language tz posix =
+    format
         [ Format.hourMilitaryFixed
         , Format.text ":"
         , Format.minuteFixed
         ]
+        language
+        tz
         posix
 
 
-posixToTimeWithSeconds : Posix -> String
-posixToTimeWithSeconds posix =
-    posixToTime posix
-        ++ sweFormat
+posixToTimeWithSeconds : Language -> Time.Zone -> Posix -> String
+posixToTimeWithSeconds language tz posix =
+    posixToTime language tz posix
+        ++ format
             [ Format.text ":"
             , Format.secondFixed
             ]
+            language
+            tz
             posix
 
 
 posixToString : String -> Posix -> String
 posixToString separator posix =
-    posixToDate posix
+    posixToDate english utc posix
         ++ separator
-        ++ posixToTimeWithSeconds posix
+        ++ posixToTimeWithSeconds english utc posix
 
 
 posixToUrlString : Posix -> String
