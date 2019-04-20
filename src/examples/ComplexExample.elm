@@ -104,7 +104,7 @@ init =
       , plotWidth = 0
       , plotHeight = 0
       }
-    , getBrowserSize
+    , getInitialBrowserSize
     )
 
 
@@ -140,10 +140,6 @@ labelFunc foobar =
 ---- UPDATE ----
 
 
-type alias Id =
-    String
-
-
 type PlotNr
     = Plot1
     | Plot2
@@ -152,14 +148,14 @@ type PlotNr
 
 type Msg
     = ToPlot PlotNr (Plot.Msg Foobar)
-    | Resize Int Int
-    | NewBrowserSize (Result Error Viewport)
+    | BrowserResize Int Int
+    | InitialBrowserSize (Result Error Viewport)
 
 
-getBrowserSize : Cmd Msg
-getBrowserSize =
+getInitialBrowserSize : Cmd Msg
+getInitialBrowserSize =
     getViewport
-        |> Task.attempt NewBrowserSize
+        |> Task.attempt InitialBrowserSize
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -180,12 +176,12 @@ update msg model =
             , Cmd.none
             )
 
-        Resize width height ->
+        BrowserResize width height ->
             ( updatePlotDimensions model (toFloat width) (toFloat height)
             , Cmd.none
             )
 
-        NewBrowserSize result ->
+        InitialBrowserSize result ->
             case result of
                 Ok { viewport } ->
                     ( updatePlotDimensions
@@ -203,8 +199,8 @@ updatePlotDimensions : Model -> Float -> Float -> Model
 updatePlotDimensions model width height =
     let
         realEstate : Float -> Float
-        realEstate dim =
-            dim - thingSize - 2 * layoutPadding
+        realEstate dimension =
+            dimension - boxSize - 2 * layoutPadding
     in
     { model
         | plotWidth = realEstate width
@@ -248,11 +244,11 @@ col color =
     fromRgb (toRgba color)
 
 
-thing : Element Msg
-thing =
+greyBox : Element Msg
+greyBox =
     el
-        [ width <| px thingSize
-        , height <| px thingSize
+        [ width <| px boxSize
+        , height <| px boxSize
         , Background.color <| col Colors.grayLightest
         , Border.rounded 20
         , Border.width 1
@@ -261,16 +257,16 @@ thing =
         none
 
 
-invisibleThing : Element Msg
-invisibleThing =
+invisibleBox : Element Msg
+invisibleBox =
     el
-        [ width <| px 150
-        , height <| px 150
+        [ width <| px boxSize
+        , height <| px boxSize
         ]
         none
 
 
-thingSize =
+boxSize =
     150
 
 
@@ -301,7 +297,7 @@ view model =
                 [ width fill
                 , height fill
                 ]
-                [ el [ centerX ] thing
+                [ el [ centerX ] greyBox
                 , column
                     [ width fill
                     , height fill
@@ -313,8 +309,8 @@ view model =
                 ]
             , column
                 [ height fill ]
-                [ el [ alignTop ] invisibleThing
-                , el [ centerY ] thing
+                [ el [ alignTop ] invisibleBox
+                , el [ centerY ] greyBox
                 ]
             ]
 
@@ -325,7 +321,7 @@ view model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Browser.Events.onResize Resize
+    Browser.Events.onResize BrowserResize
 
 
 
