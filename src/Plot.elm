@@ -4,6 +4,7 @@ module Plot exposing
     , State
     , defaultConfigWith
     , draw
+    , drawHtml
     , init
     , pointDefaultConfig
     , update
