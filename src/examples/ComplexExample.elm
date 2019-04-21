@@ -5,14 +5,12 @@ import Browser.Dom exposing (Error, Viewport, getViewport)
 import Browser.Events
 import Color exposing (toRgba)
 import DateFormat.Language
-import Debug
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import FormatNumber
 import FormatNumber.Locales
 import Html exposing (Html)
-import Html.Attributes
 import LineChart
 import LineChart.Colors as Colors
 import LineChart.Coordinate
