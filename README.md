@@ -1,7 +1,12 @@
-module Main exposing (main)
+# Plot zoomable linecharts with Elm
 
-import Browser
-import Html exposing (Html)
+The main objectives of this package is to draw linecharts that:
+* Have mouse drag zoom
+* Have reasonable time axes
+
+## Minimal example:
+
+```elm
 import ZoomPlot as Plot
 
 
@@ -13,12 +18,6 @@ points =
     [ Point 11 120
     , Point 12 121
     , Point 13 120.5
-    , Point 14 119.5
-    , Point 15 121.5
-    , Point 16 120.5
-    , Point 17 121.5
-    , Point 18 120
-    , Point 19 118
     ]
 
 
@@ -56,11 +55,4 @@ view model =
         myConfig
         model.plotState
         MyPlotMsg
-
-
-main =
-    Browser.sandbox
-        { init = init
-        , update = update
-        , view = view
-        }
+```

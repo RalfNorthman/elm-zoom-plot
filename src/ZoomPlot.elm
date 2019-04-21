@@ -1,14 +1,39 @@
 module ZoomPlot exposing
-    ( Config
+    ( easyConfig
+    , draw
+    , drawHtml
+    , Config
     , Msg
     , State
     , defaultConfigWith
-    , draw
-    , drawHtml
-    , easyConfig
     , init
     , update
     )
+
+{-|
+
+
+# Minimal configuration
+
+@docs easyConfig
+
+
+# Plotting the linechart
+
+@docs draw
+@docs drawHtml
+
+
+# Something else
+
+@docs Config
+@docs Msg
+@docs State
+@docs defaultConfigWith
+@docs init
+@docs update
+
+-}
 
 import Color
 import DateFormat as Format
@@ -55,6 +80,7 @@ defaultFormat number =
         number
 
 
+{-| -}
 type alias Config data =
     { lines : List (Series data)
     , xIsTime : Bool
@@ -81,6 +107,7 @@ type alias Config data =
     }
 
 
+{-| -}
 defaultConfigWith :
     List data
     -> (data -> Float)
@@ -113,6 +140,21 @@ defaultConfigWith dataList xAcc yAcc pointDecoder =
     }
 
 
+{-| Use this configuration as a starting point when your data is just a list of points:
+
+    type alias Point =
+        { x : Float, y : Float }
+
+    points =
+        [ Point 11 120
+        , Point 12 121
+        , Point 13 120.5
+        ]
+
+    myConfig =
+        Plot.easyConfig points
+
+-}
 easyConfig : List Point -> Config Point
 easyConfig points =
     { lines = [ LineChart.line Colors.tealLight Dots.circle "" points ]
@@ -140,6 +182,7 @@ easyConfig points =
     }
 
 
+{-| -}
 draw :
     Float
     -> Float
@@ -159,6 +202,7 @@ draw width height config state toMsg =
         )
 
 
+{-| -}
 drawHtml :
     Float
     -> Float
@@ -663,6 +707,7 @@ chart width height config state =
         config.lines
 
 
+{-| -}
 type alias State data =
     { mouseDown : Maybe data
     , rangeX : Maybe Range
@@ -675,6 +720,7 @@ type alias State data =
     }
 
 
+{-| -}
 type Msg data
     = MouseDown data
     | MouseUp data
@@ -684,6 +730,7 @@ type Msg data
     | ResetZoom
 
 
+{-| -}
 init : State data
 init =
     { mouseDown = Nothing
@@ -755,6 +802,7 @@ zoomUpdate config state point =
     }
 
 
+{-| -}
 update : Config data -> Msg data -> State data -> State data
 update config msg state =
     case msg of
