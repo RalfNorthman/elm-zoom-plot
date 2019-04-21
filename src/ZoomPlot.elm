@@ -95,9 +95,63 @@ So, what does all this mean?
         \{ x, y } -> RocketData 0 0 "" x 0 "" 0 y Nothing
 
   - **xIsTime** :
-    Wheter the x-axis should display its values as time or not.
+    Whether the x-axis should display its values as time or not.
 
         True
+
+  - **language** :
+    What language dates on time axes will be in.
+
+        import DateFormat.Language
+
+        DateFormat.Language.swedish
+
+  - **numberFormat** :
+    The function which turns floats to strings for the axis labels (on non-time axes).
+
+        import FormatNumber
+        import FormatNumber.Locales
+
+        \float ->
+            FormatNumber.format
+                FormatNumber.Locales.frenchLocale
+                float
+
+  - **timeZone** :
+    What timezone should `Time.Posix` be converted to for time axes.
+
+        import Time
+
+        Time.utc -- This is the default.
+
+  - **showLegends** :
+    Whether legends for your plot lines should be drawn. If you turn this on you most likely need to adjust `marginRight` for them to not get cut off.
+
+        True
+
+  - **labelFunc** :
+    Hoverlabels for the x and y coordinates are always on, but if you want to add something extra on a row above them you use this field. One of the more straightforward ways to use this is to just use a string field from your data type:
+
+        .rocketInventorName
+
+    or something more involved:
+
+        \d -> d.firstName ++ " " ++ d.lastName
+
+  - **xAxisLabel** / **yAxisLabel** :
+    Strings for labling the axes. Adjustment of margins and labeloffsets could be required to get the desired result.
+
+        "Rocket velocity [km/s]"
+
+  - **marginTop** / **marginRight** / **marginBottom** / **marginLeft** :
+    Size in pixels of the different margins around the actual plot. This is real estate that may or may not be needed by tick labels, legends and axis labels.
+
+        60
+
+  - **xAxisLabelOffsetX** / **xAxisLabelOffsetY** / **yAxisLabelOffsetX** / **yAxisLabelOffsetY** :
+    Distance in pixels of how much you want to adjust the positioning of the axis title labels.
+
+        20
 
 -}
 

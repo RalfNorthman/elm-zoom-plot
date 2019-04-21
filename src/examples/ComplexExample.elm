@@ -72,7 +72,7 @@ plotConfig lines =
         | lines = lines
         , xIsTime = True
         , showLegends = True
-        , labelFunc = myLabelFunc
+        , labelFunc = .text
         , language = DateFormat.Language.swedish
         , numberFormat =
             \x ->
@@ -87,11 +87,6 @@ plotConfig lines =
 myPointDecoder : LineChart.Coordinate.Point -> ExampleType
 myPointDecoder { x, y } =
     ExampleType (x |> floor |> Time.millisToPosix) y ""
-
-
-myLabelFunc : ExampleType -> String
-myLabelFunc datapoint =
-    datapoint.text
 
 
 
