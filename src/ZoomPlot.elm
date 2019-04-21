@@ -1,12 +1,12 @@
 module ZoomPlot exposing
     ( easyConfig
+    , State
+    , init
+    , Msg
     , draw
     , drawHtml
     , Config
-    , Msg
-    , State
     , defaultConfigWith
-    , init
     , update
     )
 
@@ -18,6 +18,17 @@ module ZoomPlot exposing
 @docs easyConfig
 
 
+# Storing the plot state in your model
+
+@docs State
+@docs init
+
+
+# Including the plot specific messages in your Msg
+
+@docs Msg
+
+
 # Plotting the linechart
 
 @docs draw
@@ -27,10 +38,7 @@ module ZoomPlot exposing
 # Something else
 
 @docs Config
-@docs Msg
-@docs State
 @docs defaultConfigWith
-@docs init
 @docs update
 
 -}
@@ -707,7 +715,21 @@ chart width height config state =
         config.lines
 
 
-{-| -}
+{-| You need to store the internal state of the plot in your model.
+It can be as simple as:
+
+    type alias Model =
+        { plotState : Plot.State Point }
+
+or if you have multiple plots on your page:
+
+    type alias Model =
+        { plot1 : Plot.State Point
+        , plot2 : Plot.State Point
+        , plot3 : Plot.State Point
+        }
+
+-}
 type alias State data =
     { mouseDown : Maybe data
     , rangeX : Maybe Range
@@ -730,7 +752,16 @@ type Msg data
     | ResetZoom
 
 
-{-| -}
+{-| All plots have the same initial state regardless of individual configuration.
+
+    init : Model
+    init =
+        { plot1 = Plot.init
+        , plot2 = Plot.init
+        , plot3 = Plot.init
+        }
+
+-}
 init : State data
 init =
     { mouseDown = Nothing
