@@ -6,8 +6,8 @@ module ZoomPlot exposing
     , draw
     , drawHtml
     , update
-    , Config
     , defaultConfigWith
+    , Config
     )
 
 {-|
@@ -24,7 +24,7 @@ module ZoomPlot exposing
 @docs init
 
 
-# Including Plot.Msg in your Msg
+# Including `Plot.Msg` in your `Msg`
 
 @docs Msg
 
@@ -42,8 +42,11 @@ module ZoomPlot exposing
 
 # Configuration
 
-@docs Config
 @docs defaultConfigWith
+
+Now, if you want to change anything from your default configuration you need to know about the other fields of the `Plot.Config` type:
+
+@docs Config
 
 -}
 
@@ -92,26 +95,39 @@ defaultFormat number =
         number
 
 
-{-| -}
+{-| So, what does all this mean?
+
+  - **lines** :
+    A list where you set how your different "lines" on your chart should look: color, point shape and legend name.
+
+        import LineChart
+        import LineChart.Colors as Colors
+        import LineChart.Dots as Dots
+
+        [ LineChart.line Colors.tealLight Dots.circle "cos" myCosData
+        , LineChart.line Colors.goldLight Dots.diamond "polysin" myPolySinData
+        ]
+
+    _Note:_ This package use the fork [peterszerzo/line-charts](https://package.elm-lang.org/packages/peterszerzo/line-charts/latest) since it contains necessary updates from Tereza Sokols (terezka) original package. I advise you do the same if you don't want unnecessary duplication among your dependencies.
+
+-}
 type alias Config data =
     { lines : List (Series data)
+    , xAcc : data -> Float
+    , yAcc : data -> Float
+    , pointDecoder : Point -> data
     , xIsTime : Bool
     , language : Language
     , numberFormat : Float -> String
     , timezone : Time.Zone
     , showLegends : Bool
-    , xAcc : data -> Float
-    , yAcc : data -> Float
-    , pointDecoder : Point -> data
     , labelFunc : data -> String
     , xAxisLabel : String
     , yAxisLabel : String
-    , margin :
-        { top : Float
-        , right : Float
-        , bottom : Float
-        , left : Float
-        }
+    , marginTop : Float
+    , marginRight : Float
+    , marginBottom : Float
+    , marginLeft : Float
     , xAxisLabelOffsetX : Float
     , xAxisLabelOffsetY : Float
     , yAxisLabelOffsetX : Float
@@ -119,7 +135,35 @@ type alias Config data =
     }
 
 
-{-| -}
+{-| If you want to plot data that is not of type `Point` you can't use `easyConfig`. Instead you use `defaultConfigWith` to create your starting point configuration.
+
+    type alias ExampleType =
+        { time : Posix
+        , value : Float
+        , text : String
+        , otherValue : Float
+        }
+
+You need to supply it with two accessor functions (getters), one for each chart coordinate (x and y).
+
+    myDefaultConfig : Plot.Config ExampleType
+    myDefaultConfig =
+        Plot.defaultConfigWith
+            listOfExampleTypes
+            (.time >> Time.posixToMillis >> toFloat)
+            .value
+            myPointDecoder
+
+It also needs a _point decoder_. The internals of the package needs a way to convert Point back to your type. You basically have to write a function that puts the coordinates of a `Point` into an "empty" instance of your type.
+
+    myPointDecoder { x, y } =
+        let
+            decodedX =
+                x |> floor |> Time.millisToPosix
+        in
+        ExampleType decodedX y "" 0
+
+-}
 defaultConfigWith :
     List data
     -> (data -> Float)
@@ -128,23 +172,21 @@ defaultConfigWith :
     -> Config data
 defaultConfigWith dataList xAcc yAcc pointDecoder =
     { lines = [ LineChart.line Colors.tealLight Dots.circle "" dataList ]
+    , xAcc = xAcc
+    , yAcc = yAcc
+    , pointDecoder = pointDecoder
     , xIsTime = False
     , language = english
     , numberFormat = defaultFormat
     , timezone = Time.utc
     , showLegends = False
-    , xAcc = xAcc
-    , yAcc = yAcc
-    , pointDecoder = pointDecoder
     , labelFunc = \_ -> ""
     , xAxisLabel = ""
     , yAxisLabel = ""
-    , margin =
-        { top = 20
-        , right = 30
-        , bottom = 30
-        , left = 60
-        }
+    , marginTop = 20
+    , marginRight = 30
+    , marginBottom = 30
+    , marginLeft = 60
     , xAxisLabelOffsetX = 0
     , xAxisLabelOffsetY = 0
     , yAxisLabelOffsetX = 0
@@ -152,7 +194,7 @@ defaultConfigWith dataList xAcc yAcc pointDecoder =
     }
 
 
-{-| Use this configuration as a starting point when your data is just a list of points:
+{-| Use this configuration as a starting point when your data is just a `List Point`:
 
     type alias Point =
         { x : Float, y : Float }
@@ -170,23 +212,21 @@ defaultConfigWith dataList xAcc yAcc pointDecoder =
 easyConfig : List Point -> Config Point
 easyConfig points =
     { lines = [ LineChart.line Colors.tealLight Dots.circle "" points ]
+    , xAcc = .x
+    , yAcc = .y
+    , pointDecoder = \p -> p
     , xIsTime = False
     , language = english
     , numberFormat = defaultFormat
     , timezone = Time.utc
     , showLegends = False
-    , xAcc = .x
-    , yAcc = .y
-    , pointDecoder = \p -> p
     , labelFunc = \_ -> ""
     , xAxisLabel = ""
     , yAxisLabel = ""
-    , margin =
-        { top = 20
-        , right = 30
-        , bottom = 30
-        , left = 60
-        }
+    , marginTop = 20
+    , marginRight = 30
+    , marginBottom = 30
+    , marginLeft = 60
     , xAxisLabelOffsetX = 0
     , xAxisLabelOffsetY = 0
     , yAxisLabelOffsetX = 0
@@ -236,7 +276,7 @@ draw width height config state toMsg =
         )
 
 
-{-| If you for some reason are not using [mdgriffith/elm-ui](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest) you can use this draw function instead which outputs regular Html msg.
+{-| If you for some reason are not using [mdgriffith/elm-ui](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest) you can use this draw function instead which outputs regular `Html msg`.
 -}
 drawHtml :
     Float
@@ -521,7 +561,12 @@ containerConfig config =
         { attributesHtml = []
         , attributesSvg = [ SvgAttrPx.fontSize fontSize ]
         , size = Container.relative
-        , margin = config.margin
+        , margin =
+            { top = config.marginTop
+            , bottom = config.marginBottom
+            , left = config.marginLeft
+            , right = config.marginRight
+            }
         , id = "whatever"
         }
 
@@ -877,7 +922,7 @@ zoomUpdate config state point =
     }
 
 
-{-| Naturally you need to handle the plot messages in your update function. This is what Plot.update is for.
+{-| Naturally you need to handle the plot messages in your update function. This is what `Plot.update` is for.
 
     update : Msg -> Model -> Model
     update msg model =

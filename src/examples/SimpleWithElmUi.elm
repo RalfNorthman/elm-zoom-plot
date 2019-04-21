@@ -28,7 +28,10 @@ myConfig =
         default =
             Plot.easyConfig points
     in
-    { default | showLegends = True }
+    { default
+        | showLegends = True
+        , marginRight = 70
+    }
 
 
 type alias Model =
