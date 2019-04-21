@@ -24,7 +24,11 @@ points =
 
 
 myConfig =
-    Plot.easyConfig points
+    let
+        default =
+            Plot.easyConfig points
+    in
+    { default | showLegends = True }
 
 
 type alias Model =

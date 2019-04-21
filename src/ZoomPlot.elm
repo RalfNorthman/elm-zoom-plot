@@ -5,9 +5,9 @@ module ZoomPlot exposing
     , Msg
     , draw
     , drawHtml
+    , update
     , Config
     , defaultConfigWith
-    , update
     )
 
 {-|
@@ -35,11 +35,15 @@ module ZoomPlot exposing
 @docs drawHtml
 
 
-# Something else
+# Updating your plot state
+
+@docs update
+
+
+# Configuration
 
 @docs Config
 @docs defaultConfigWith
-@docs update
 
 -}
 
@@ -190,7 +194,7 @@ easyConfig points =
     }
 
 
-{-| This is what you use to place your linechart within your view.
+{-| Use this function to place your linechart within your view.
 
     import Element as E
 
@@ -739,6 +743,7 @@ chart width height config state =
 
 
 {-| You need to store the internal state of the plot in your model.
+
 It can be as simple as:
 
     type alias Model =
@@ -872,7 +877,48 @@ zoomUpdate config state point =
     }
 
 
-{-| -}
+{-| Naturally you need to handle the plot messages in your update function. This is what Plot.update is for.
+
+    update : Msg -> Model -> Model
+    update msg model =
+        case msg of
+            MyPlotMsg plotMsg ->
+                { model
+                    | plotState =
+                        Plot.update
+                            myConfig
+                            plotMsg
+                            model.plotState
+                }
+
+If you need routing to update multiple plots:
+
+    update : Msg -> Model -> ( Model, Cmd Msg )
+    update msg model =
+        case msg of
+            ToPlot Plot1 plotMsg ->
+                ( { model
+                    | plot1 =
+                        Plot.update
+                            plotConfig1
+                            plotMsg
+                            model.plot1
+                  }
+                , Cmd.none
+                )
+
+            ToPlot Plot2 plotMsg ->
+                ( { model
+                    | plot2 =
+                        Plot.update
+                            plotConfig2
+                            plotMsg
+                            model.plot2
+                  }
+                , Cmd.none
+                )
+
+-}
 update : Config data -> Msg data -> State data -> State data
 update config msg state =
     case msg of
