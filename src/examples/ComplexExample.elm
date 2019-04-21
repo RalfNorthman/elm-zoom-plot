@@ -77,12 +77,10 @@ plotConfig lines =
         , numberFormat =
             \x ->
                 FormatNumber.format FormatNumber.Locales.frenchLocale x
-        , margin =
-            { top = 20
-            , right = 130
-            , bottom = 30
-            , left = 70
-            }
+        , marginTop = 20
+        , marginRight = 130
+        , marginBottom = 30
+        , marginLeft = 70
     }
 
 
