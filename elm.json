@@ -1,11 +1,11 @@
 {
     "type": "package",
-    "name": "RalfNorthman/zoom-chart",
+    "name": "RalfNorthman/elm-zoom-plot",
     "summary": "Plotting line charts with zoom and hover labels.",
     "license": "BSD-3-Clause",
     "version": "0.0.1",
     "exposed-modules": [
-        "Plot"
+        "ZoomPlot"
     ],
     "elm-version": "0.19.0 <= v < 0.20.0",
     "dependencies": {

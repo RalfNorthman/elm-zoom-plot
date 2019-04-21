@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Html exposing (Html)
-import Plot
+import ZoomPlot as Plot
 
 
 type alias Point =
@@ -50,7 +50,8 @@ myConfig =
 
 view : Model -> Html Msg
 view model =
-    Plot.drawHtml 800
+    Plot.drawHtml
+        800
         600
         myConfig
         model.plotState

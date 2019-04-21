@@ -1,4 +1,4 @@
-module Plot exposing
+module ZoomPlot exposing
     ( Config
     , Msg
     , State

@@ -17,9 +17,9 @@ import LineChart
 import LineChart.Colors as Colors
 import LineChart.Coordinate
 import LineChart.Dots as Dots
-import Plot
 import Task exposing (Task)
 import Time exposing (Posix)
+import ZoomPlot as Plot
 
 
 
@@ -71,6 +71,7 @@ plotConfig lines =
     { default
         | lines = lines
         , xIsTime = True
+        , showLegends = True
         , labelFunc = myLabelFunc
         , language = DateFormat.Language.swedish
         , numberFormat =
@@ -78,7 +79,7 @@ plotConfig lines =
                 FormatNumber.format FormatNumber.Locales.frenchLocale x
         , margin =
             { top = 20
-            , right = 0
+            , right = 130
             , bottom = 30
             , left = 70
             }
@@ -237,7 +238,8 @@ view : Model -> Html Msg
 view model =
     let
         myDraw lines acc rout =
-            Plot.draw model.plotWidth
+            Plot.draw
+                model.plotWidth
                 model.plotHeight
                 (plotConfig lines)
                 (acc model)
