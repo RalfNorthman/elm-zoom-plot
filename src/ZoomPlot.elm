@@ -29,7 +29,7 @@ module ZoomPlot exposing
 @docs Msg
 
 
-# Plotting your linechart
+# Drawing your linechart
 
 @docs draw
 @docs drawHtml
@@ -42,7 +42,7 @@ module ZoomPlot exposing
 
 # Customizing your plot
 
-Let's say you want customize your configuration to show legends for your different lines and also extend the right margin so the legends doesn't get cut off. You can do that like this:
+Let's say you want customize your configuration to show legends for your different lines and also extend the right margin so the legends doesn't get cut off. You can do it like this:
 
     myConfig =
         let
@@ -67,25 +67,33 @@ If you want to start customizing every aspect of your plot you need to know abou
 So, what does all this mean?
 
   - **lines** :
-    A list where you set how your different "lines" on your chart should look: color, point shape and legend name.
+    A list where you set how your different "lines" on your chart should look: color, point shape and legend name. Most importantly it is also here you supply your data to the configuration.
 
         import LineChart
         import LineChart.Colors as Colors
         import LineChart.Dots as Dots
 
-        [ LineChart.line Colors.tealLight Dots.circle "cos" myCosData
-        , LineChart.line Colors.goldLight Dots.diamond "polysin" myPolySinData
+        [ LineChart.line
+            Colors.tealLight
+            Dots.circle
+            "cos"
+            myCosData
+        , LineChart.line
+            Colors.goldLight
+            Dots.diamond
+            "polysin"
+            myPolySinData
         ]
 
     _Note:_ This package use the fork [peterszerzo/line-charts](https://package.elm-lang.org/packages/peterszerzo/line-charts/latest) since it contains necessary updates to Tereza Sokols (terezka) great original package. I advise you to do the same, otherwise namespace collisions seem inevitable.
 
   - **xAcc** :
-    Getter function from your data type to the float value used for x coordinates.
+    Accessor function (getter) from your data type to the float value used for x coordinates. If you want a time axis (don't forget to set `xIsTime` to `True`) for your `Time.Posix` values you can do something like this:
 
         .time >> Time.posixToMillis >> toFloat
 
   - **yAcc** :
-    Getter function from your data type to the float value used for y coordinates.
+    Accessor function (getter) from your data type to the float value used for y coordinates.
 
         .rocketThrust
 
@@ -118,7 +126,7 @@ So, what does all this mean?
                 float
 
   - **timeZone** :
-    What timezone should `Time.Posix` be converted to for time axes.
+    Which timezone should your `Time.Posix` values be converted into for your time axis.
 
         import Time
 
