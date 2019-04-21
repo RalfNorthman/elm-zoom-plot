@@ -40,11 +40,27 @@ module ZoomPlot exposing
 @docs update
 
 
-# Configuration
+# Customizing your plot
+
+Let's say you want customize your configuration to show legends for your different lines and also extend the right margin so the legends doesn't get cut off. You can do that like this:
+
+    myConfig =
+        let
+            default =
+                Plot.easyConfig points
+        in
+        { default
+            | showLegends = True
+            , marginRight = 70
+        }
+
+What if your data isn't in the form of `{ x : Float, y : Float}`?
+
+Then you will need:
 
 @docs defaultConfigWith
 
-Now, if you want to change anything from your default configuration you need to know about the other fields of the `Plot.Config` type:
+If you want to start customizing every aspect of your plot you need to know about all the fields of the `Plot.Config` type:
 
 @docs Config
 
@@ -155,7 +171,7 @@ type alias Config data =
     }
 
 
-{-| If you want to plot data that is not of type `Point` you can't use `easyConfig`. Instead you use `defaultConfigWith` to create your starting point configuration.
+{-| Say that your data is a list of this type:
 
     type alias ExampleType =
         { time : Posix
@@ -163,6 +179,9 @@ type alias Config data =
         , text : String
         , otherValue : Float
         }
+
+If you want to plot data like this you can't use `easyConfig`, because it only works with data of type `Point`.
+Instead you will have to use `defaultConfigWith` to create your starting point configuration.
 
 You need to supply it with two accessor functions (getters), one for each chart coordinate (x and y).
 
@@ -174,7 +193,7 @@ You need to supply it with two accessor functions (getters), one for each chart 
             .value
             myPointDecoder
 
-It also needs a _point decoder_. The internals of the package needs a way to convert Point back to your type. You basically have to write a function that puts the coordinates of a `Point` into an "empty" instance of your type.
+It also needs a _point decoder_. The internals of the package needs a way to convert Point back to your type. You basically have to write a function that puts the coordinates of a `Point` into an "empty" instance of your type:
 
     myPointDecoder { x, y } =
         let
