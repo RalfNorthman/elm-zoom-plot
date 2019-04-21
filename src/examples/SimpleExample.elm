@@ -45,7 +45,7 @@ update msg model =
 
 
 myConfig =
-    Plot.pointDefaultConfig points
+    Plot.easyConfig points
 
 
 view : Model -> Html Msg

@@ -5,8 +5,8 @@ module ZoomPlot exposing
     , defaultConfigWith
     , draw
     , drawHtml
+    , easyConfig
     , init
-    , pointDefaultConfig
     , update
     )
 
@@ -113,8 +113,8 @@ defaultConfigWith dataList xAcc yAcc pointDecoder =
     }
 
 
-pointDefaultConfig : List Point -> Config Point
-pointDefaultConfig points =
+easyConfig : List Point -> Config Point
+easyConfig points =
     { lines = [ LineChart.line Colors.tealLight Dots.circle "" points ]
     , xIsTime = False
     , language = english
