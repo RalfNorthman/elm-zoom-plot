@@ -24,12 +24,12 @@ module ZoomPlot exposing
 @docs init
 
 
-# Including the plot specific messages in your Msg
+# Including Plot.Msg in your Msg
 
 @docs Msg
 
 
-# Plotting the linechart
+# Plotting your linechart
 
 @docs draw
 @docs drawHtml
@@ -190,7 +190,29 @@ easyConfig points =
     }
 
 
-{-| -}
+{-| This is what you use to place your linechart within your view.
+
+    import Element as E
+
+    view model =
+        E.layout [ E.padding 20 ] <|
+            E.el
+                [ E.width <| px 800
+                , E.height <| px 600
+                ]
+            <|
+                Plot.draw
+                    800
+                    600
+                    myConfig
+                    model.plotState
+                    MyPlotMsg
+
+The first two arguments are width and height, which mostly determines the aspect ratio of your plot since it fills the container you place it in.
+
+Small dimension values in large containers can make the text in the plot unreasonably large.
+
+-}
 draw :
     Float
     -> Float
@@ -210,7 +232,8 @@ draw width height config state toMsg =
         )
 
 
-{-| -}
+{-| If you for some reason are not using [mdgriffith/elm-ui](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest) you can use this draw function instead which outputs regular Html msg.
+-}
 drawHtml :
     Float
     -> Float
@@ -742,7 +765,23 @@ type alias State data =
     }
 
 
-{-| -}
+{-| Include it within a constructor for easy pattern matching in your update function:
+
+    type Msg
+        = MyPlotMsg (Plot.Msg Point)
+        | MsgNotConcerningPlots
+
+or if you need routing for several plots:
+
+    type PlotNr
+        = Plot1
+        | Plot2
+        | Plot3
+
+    type Msg
+        = ToPlot PlotNr (Plot.Msg ExampleType)
+
+-}
 type Msg data
     = MouseDown data
     | MouseUp data
