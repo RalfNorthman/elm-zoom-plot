@@ -48,6 +48,41 @@ Now, if you want to change anything from your default configuration you need to 
 
 @docs Config
 
+So, what does all this mean?
+
+  - **lines** :
+    A list where you set how your different "lines" on your chart should look: color, point shape and legend name.
+
+        import LineChart
+        import LineChart.Colors as Colors
+        import LineChart.Dots as Dots
+
+        [ LineChart.line Colors.tealLight Dots.circle "cos" myCosData
+        , LineChart.line Colors.goldLight Dots.diamond "polysin" myPolySinData
+        ]
+
+    _Note:_ This package use the fork [peterszerzo/line-charts](https://package.elm-lang.org/packages/peterszerzo/line-charts/latest) since it contains necessary updates to Tereza Sokols (terezka) great original package. I advise you to do the same, otherwise namespace collisions seem inevitable.
+
+  - **xAcc** :
+    Getter function from your data type to the float value used for x coordinates.
+
+        .time >> Time.posixToMillis >> toFloat
+
+  - **yAcc** :
+    Getter function from your data type to the float value used for y coordinates.
+
+        .rocketThrust
+
+  - **pointDecoder** :
+    The internals of the package needs a way to convert Point back to your type. You basically have to write a function that puts the coordinates of a `Point` into an "empty" instance of your type.
+
+        \{ x, y } -> RocketData 0 0 "" x 0 "" 0 y Nothing
+
+  - **xIsTime** :
+    Wheter the x-axis should display its values as time or not.
+
+        True
+
 -}
 
 import Color
@@ -95,42 +130,7 @@ defaultFormat number =
         number
 
 
-{-| So, what does all this mean?
-
-  - **lines** :
-    A list where you set how your different "lines" on your chart should look: color, point shape and legend name.
-
-        import LineChart
-        import LineChart.Colors as Colors
-        import LineChart.Dots as Dots
-
-        [ LineChart.line Colors.tealLight Dots.circle "cos" myCosData
-        , LineChart.line Colors.goldLight Dots.diamond "polysin" myPolySinData
-        ]
-
-    _Note:_ This package use the fork [peterszerzo/line-charts](https://package.elm-lang.org/packages/peterszerzo/line-charts/latest) since it contains necessary updates to Tereza Sokols (terezka) great original package. I advise you to do the same, otherwise namespace collisions seem inevitable.
-
-  - **xAcc** :
-    Getter function from your data type to the float value used for x coordinates.
-
-        .time >> Time.posixToMillis >> toFloat
-
-  - **yAcc** :
-    Getter function from your data type to the float value used for y coordinates.
-
-        .rocketThrust
-
-  - **pointDecoder** :
-    The internals of the package needs a way to convert Point back to your type. You basically have to write a function that puts the coordinates of a `Point` into an "empty" instance of your type.
-
-        \{ x, y } -> RocketData 0 0 "" x 0 "" 0 y Nothing
-
-  - **xIsTime** :
-    Wheter the x-axis should display its values as time or not.
-
-        True
-
--}
+{-| -}
 type alias Config data =
     { lines : List (Series data)
     , xAcc : data -> Float
