@@ -42,7 +42,7 @@ module ZoomPlot exposing
 
 # Customizing your plot
 
-Let's say you want customize your configuration to show legends for your different lines and also extend the right margin so the legends doesn't get cut off. You can do it like this:
+Let's say that you want to customize your configuration to show legends for your different lines and also extend the right margin so that the legends don't get cut off. You can do it like this:
 
     myConfig =
         let
@@ -67,7 +67,7 @@ If you want to start customizing every aspect of your plot you need to know abou
 So, what does all this mean?
 
   - **lines** :
-    A list where you set how your different "lines" on your chart should look: color, point shape and legend name. Most importantly it is also here you supply your data to the configuration.
+    A list where you set how the different "lines" on your chart should look: color, point shape and legend name. Most importantly it is also here you supply your data to the configuration.
 
         import LineChart
         import LineChart.Colors as Colors
@@ -85,7 +85,7 @@ So, what does all this mean?
             myPolySinData
         ]
 
-    _Note:_ This package use the fork [peterszerzo/line-charts](https://package.elm-lang.org/packages/peterszerzo/line-charts/latest) since it contains necessary updates to Tereza Sokols (terezka) great original package. I advise you to do the same, otherwise namespace collisions seem inevitable.
+    _Note:_ This package uses the fork [peterszerzo/line-charts](https://package.elm-lang.org/packages/peterszerzo/line-charts/latest) since it contains necessary updates to terezka's great original package. I advise you to do the same, otherwise namespace collisions seem inevitable.
 
   - **xAcc** :
     Accessor function (getter) from your data type to the float value used for x coordinates. If you want a time axis (don't forget to set `xIsTime` to `True`) for your `Time.Posix` values you can do something like this:
@@ -126,14 +126,14 @@ So, what does all this mean?
                 float
 
   - **timeZone** :
-    Which timezone should your `Time.Posix` values be converted into for your time axis.
+    Which timezone your `Time.Posix` values should be converted into for your time axis.
 
         import Time
 
         Time.utc -- This is the default.
 
   - **showLegends** :
-    Whether legends for your plot lines should be drawn. If you turn this on you most likely need to adjust `marginRight` for them to not get cut off.
+    Whether legends for your plot lines should be drawn. If you turn this on you most likely also need to adjust `marginRight` for them to not get cut off.
 
         True
 
@@ -147,7 +147,7 @@ So, what does all this mean?
         \d -> d.firstName ++ " " ++ d.lastName
 
   - **xAxisLabel** / **yAxisLabel** :
-    Strings for labling the axes. Adjustment of margins and labeloffsets could be required to get the desired result.
+    Strings for labeling the axes. Adjustment of margins and label offsets could be required to get the desired result.
 
         "Rocket velocity [km/s]"
 
@@ -160,6 +160,46 @@ So, what does all this mean?
     Distance in pixels of how much you want to adjust the positioning of the axis title labels.
 
         20
+
+
+# Configuration defaults
+
+It can be useful to know what the defaults are:
+
+        { lines = [ LineChart.line
+                        Colors.tealLight
+                        Dots.circle
+                        ""
+                        inputPoints
+                  ]
+        , xAcc = .x
+        , yAcc = .y
+        , pointDecoder = \p -> p
+        , xIsTime = False
+        , language = english
+        , numberFormat = defaultFormat
+        , timezone = Time.utc
+        , showLegends = False
+        , labelFunc = \_ -> ""
+        , xAxisLabel = ""
+        , yAxisLabel = ""
+        , marginTop = 20
+        , marginRight = 30
+        , marginBottom = 30
+        , marginLeft = 60
+        , xAxisLabelOffsetX = 0
+        , xAxisLabelOffsetY = 0
+        , yAxisLabelOffsetX = 0
+        , yAxisLabelOffsetY = 0
+        }
+
+        defaultFormat : Float -> String
+        defaultFormat number =
+            FormatNumber.format
+                FormatNumber.Locales.usLocale
+                number
+
+Above are the defaults from `easyConfig`, where `inputPoints` comes from the user. The defaults for `defaultConfigWith` are the same except the fields `xAcc`, `yAcc` and `pointDecoder` which are user-provided as well.
 
 -}
 
@@ -233,7 +273,7 @@ type alias Config data =
     }
 
 
-{-| Say that your data is a list of this type:
+{-| Let's say that your data is a list of this type:
 
     type alias ExampleType =
         { time : Posix
@@ -377,7 +417,7 @@ draw width height config state toMsg =
         )
 
 
-{-| If you for some reason are not using [mdgriffith/elm-ui](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest) you can use this draw function instead which outputs regular `Html msg`.
+{-| If you, for some reason, are not using [mdgriffith/elm-ui](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest) you can use this draw function instead which outputs regular `Html msg`.
 -}
 drawHtml :
     Float

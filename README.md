@@ -1,6 +1,6 @@
 # Plot zoomable linecharts with Elm
 
-The main objective of this package is to draw linecharts that:
+The main objective of this package is to draw linecharts which:
 * Have mouse drag zoom
 * Have reasonable time axes
 
