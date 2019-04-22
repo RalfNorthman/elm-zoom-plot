@@ -3,7 +3,7 @@
     "name": "RalfNorthman/elm-zoom-plot",
     "summary": "Plotting line charts with zoom and nice time axes.",
     "license": "BSD-3-Clause",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "exposed-modules": [
         "ZoomPlot"
     ],
@@ -22,6 +22,5 @@
         "peterszerzo/line-charts": "1.0.1 <= v < 2.0.0",
         "ryannhg/date-format": "2.3.0 <= v < 3.0.0"
     },
-    "test-dependencies": {
-    }
+    "test-dependencies": {}
 }

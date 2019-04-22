@@ -543,7 +543,7 @@ customFormatChange { language, timezone } info =
 
 
 eventsConfig : Config data -> State data -> Events.Config data (Msg data)
-eventsConfig config state =
+eventsConfig config (State state) =
     let
         myGetData : Events.Decoder data data
         myGetData =
@@ -563,7 +563,7 @@ eventsConfig config state =
 
 
 xAxisConfig : Float -> Config data -> State data -> Axis.Config data msg
-xAxisConfig width config state =
+xAxisConfig width config (State state) =
     Axis.custom
         { title =
             Title.atAxisMax
@@ -579,7 +579,7 @@ xAxisConfig width config state =
 
 
 yAxisConfig : Float -> Config data -> State data -> Axis.Config data msg
-yAxisConfig height config state =
+yAxisConfig height config (State state) =
     Axis.custom
         { title =
             Title.atAxisMax
@@ -782,7 +782,7 @@ hoverJunk config hovered sys =
 
 
 junkConfig : Config data -> State data -> Junk.Config data (Msg data)
-junkConfig config state =
+junkConfig config (State state) =
     case state.mouseDown of
         Nothing ->
             case state.hovered of
@@ -860,7 +860,7 @@ chartConfig :
     -> Config data
     -> State data
     -> LineChart.Config data (Msg data)
-chartConfig width height config state =
+chartConfig width height config ((State state_) as state) =
     { x = xAxisConfig width config state
     , y = yAxisConfig height config state
     , container = containerConfig config
@@ -877,7 +877,7 @@ chartConfig width height config state =
     , grid = Grid.default
     , area = Area.default
     , line = Line.default
-    , dots = dotsConfig state.hovered
+    , dots = dotsConfig state_.hovered
     }
 
 
@@ -904,16 +904,17 @@ or if you have multiple plots on your page:
         }
 
 -}
-type alias State data =
-    { mouseDown : Maybe data
-    , rangeX : Maybe Range
-    , rangeY : Maybe Range
-    , xZoom : Zoom
-    , yZoom : Zoom
-    , hovered : Maybe data
-    , moved : Maybe data
-    , movedSinceMouseDown : Int
-    }
+type State data
+    = State
+        { mouseDown : Maybe data
+        , rangeX : Maybe Range
+        , rangeY : Maybe Range
+        , xZoom : Zoom
+        , yZoom : Zoom
+        , hovered : Maybe data
+        , moved : Maybe data
+        , movedSinceMouseDown : Int
+        }
 
 
 {-| Include it within a constructor for easy pattern matching in your update function:
@@ -954,15 +955,16 @@ type Msg data
 -}
 init : State data
 init =
-    { mouseDown = Nothing
-    , rangeX = Nothing
-    , rangeY = Nothing
-    , xZoom = UnZoomed
-    , yZoom = UnZoomed
-    , hovered = Nothing
-    , moved = Nothing
-    , movedSinceMouseDown = 0
-    }
+    State
+        { mouseDown = Nothing
+        , rangeX = Nothing
+        , rangeY = Nothing
+        , xZoom = UnZoomed
+        , yZoom = UnZoomed
+        , hovered = Nothing
+        , moved = Nothing
+        , movedSinceMouseDown = 0
+        }
 
 
 type XY
@@ -971,7 +973,7 @@ type XY
 
 
 newRange : Config data -> State data -> data -> XY -> ( Maybe Range, Zoom )
-newRange config state mouseUp xy =
+newRange config (State state) mouseUp xy =
     case state.mouseDown of
         Just a ->
             let
@@ -1005,7 +1007,7 @@ newRange config state mouseUp xy =
 
 
 zoomUpdate : Config data -> State data -> data -> State data
-zoomUpdate config state point =
+zoomUpdate config ((State state_) as state) point =
     let
         ( rx, xc ) =
             newRange config state point X
@@ -1013,14 +1015,15 @@ zoomUpdate config state point =
         ( ry, yc ) =
             newRange config state point Y
     in
-    { state
-        | xZoom = xc
-        , yZoom = yc
-        , rangeX = rx
-        , rangeY = ry
-        , mouseDown = Nothing
-        , movedSinceMouseDown = 0
-    }
+    State
+        { state_
+            | xZoom = xc
+            , yZoom = yc
+            , rangeX = rx
+            , rangeY = ry
+            , mouseDown = Nothing
+            , movedSinceMouseDown = 0
+        }
 
 
 {-| Naturally you need to handle the plot messages in your update function. This is what `Plot.update` is for.
@@ -1066,22 +1069,23 @@ If you need routing to update multiple plots:
 
 -}
 update : Config data -> Msg data -> State data -> State data
-update config msg state =
+update config msg ((State state_) as state) =
     case msg of
         MouseDown point ->
-            case state.mouseDown of
+            case state_.mouseDown of
                 Nothing ->
-                    { state
-                        | mouseDown = Just point
-                        , hovered = Nothing
-                        , moved = Nothing
-                    }
+                    State
+                        { state_
+                            | mouseDown = Just point
+                            , hovered = Nothing
+                            , moved = Nothing
+                        }
 
                 Just oldPoint ->
                     zoomUpdate config state point
 
         MouseUp point ->
-            case state.mouseDown of
+            case state_.mouseDown of
                 Just _ ->
                     zoomUpdate config state point
 
@@ -1089,28 +1093,30 @@ update config msg state =
                     state
 
         Hover point ->
-            { state | hovered = point }
+            State { state_ | hovered = point }
 
         Move point ->
-            case state.mouseDown of
+            case state_.mouseDown of
                 Nothing ->
-                    { state | moved = Just point }
+                    State { state_ | moved = Just point }
 
                 Just _ ->
                     let
                         oldCount =
-                            state.movedSinceMouseDown
+                            state_.movedSinceMouseDown
                     in
-                    { state
-                        | moved = Just point
-                        , movedSinceMouseDown = oldCount + 1
-                    }
+                    State
+                        { state_
+                            | moved = Just point
+                            , movedSinceMouseDown = oldCount + 1
+                        }
 
         MouseLeave ->
-            { state | hovered = Nothing }
+            State { state_ | hovered = Nothing }
 
         ResetZoom ->
-            { state
-                | xZoom = UnZoomed
-                , yZoom = UnZoomed
-            }
+            State
+                { state_
+                    | xZoom = UnZoomed
+                    , yZoom = UnZoomed
+                }
