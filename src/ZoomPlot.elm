@@ -354,33 +354,6 @@ type Config data
         }
 
 
-defaults : Config data
-defaults =
-    { lines = []
-    , xAcc = .x
-    , yAcc = .y
-    , pointDecoder = \p -> p
-    , width = 800
-    , height = 450
-    , xIsTime = False
-    , language = english
-    , numberFormat = defaultFormat
-    , timezone = Time.utc
-    , showLegends = False
-    , labelFunc = \_ -> ""
-    , xAxisLabel = ""
-    , yAxisLabel = ""
-    , marginTop = 20
-    , marginRight = 30
-    , marginBottom = 30
-    , marginLeft = 60
-    , xAxisLabelOffsetX = 0
-    , xAxisLabelOffsetY = 0
-    , yAxisLabelOffsetX = 0
-    , yAxisLabelOffsetY = 0
-    }
-
-
 {-| Use this configuration as a starting point when your data is just a `List Point`:
 
     type alias Point =
@@ -398,9 +371,30 @@ defaults =
 -}
 points : List Point -> Config Point
 points points_ =
-    { defaults
-        | lines = [ LineChart.line Colors.rust Dots.circle "" points_ ]
-    }
+    Config
+        { lines = [ LineChart.line Colors.rust Dots.circle "" points_ ]
+        , xAcc = .x
+        , yAcc = .y
+        , pointDecoder = \p -> p
+        , width = 800
+        , height = 450
+        , xIsTime = False
+        , language = english
+        , numberFormat = defaultFormat
+        , timezone = Time.utc
+        , showLegends = False
+        , labelFunc = \_ -> ""
+        , xAxisLabel = ""
+        , yAxisLabel = ""
+        , marginTop = 20
+        , marginRight = 30
+        , marginBottom = 30
+        , marginLeft = 60
+        , xAxisLabelOffsetX = 0
+        , xAxisLabelOffsetY = 0
+        , yAxisLabelOffsetX = 0
+        , yAxisLabelOffsetY = 0
+        }
 
 
 {-| Let's say that your data is a list of this type:
@@ -443,12 +437,30 @@ custom :
     }
     -> Config data
 custom { lines, xAcc, yAcc, pointDecoder } =
-    { defaults
-        | lines = lines
+    Config
+        { lines = lines
         , xAcc = xAcc
         , yAcc = yAcc
         , pointDecoder = pointDecoder
-    }
+        , width = 800
+        , height = 450
+        , xIsTime = False
+        , language = english
+        , numberFormat = defaultFormat
+        , timezone = Time.utc
+        , showLegends = False
+        , labelFunc = \_ -> ""
+        , xAxisLabel = ""
+        , yAxisLabel = ""
+        , marginTop = 20
+        , marginRight = 30
+        , marginBottom = 30
+        , marginLeft = 60
+        , xAxisLabelOffsetX = 0
+        , xAxisLabelOffsetY = 0
+        , yAxisLabelOffsetX = 0
+        , yAxisLabelOffsetY = 0
+        }
 
 
 type alias Model data =
@@ -486,37 +498,44 @@ type alias Model data =
 
 
 toModel : Config data -> State data -> Model data
-toModel { lines, xAcc, yAcc, pointDecoder, width, height, xIsTime, language, numberFormat, timezone, showLegends, labelFunc, xAxisLabel, yAxisLabel, marginTop, marginRight, marginBottom, marginLeft, xAxisLabelOffsetX, xAxisLabelOffsetY, yAxisLabelOffsetX, yAxisLabelOffsetY } { mouseDown, rangeX, rangeY, xZoom, yZoom, hovered, moved, movedSinceMouseDown } =
-    { lines = lines
-    , xAcc = xAcc
-    , yAcc = yAcc
-    , pointDecoder = pointDecoder
-    , width = width
-    , height = height
-    , xIsTime = xIsTime
-    , language = language
-    , numberFormat = numberFormat
-    , timezone = timezone
-    , showLegends = showLegends
-    , labelFunc = labelFunc
-    , xAxisLabel = xAxisLabel
-    , yAxisLabel = yAxisLabel
-    , marginTop = marginTop
-    , marginRight = marginRight
-    , marginBottom = marginBottom
-    , marginLeft = marginLeft
-    , xAxisLabelOffsetX = xAxisLabelOffsetX
-    , xAxisLabelOffsetY = xAxisLabelOffsetY
-    , yAxisLabelOffsetX = yAxisLabelOffsetX
-    , yAxisLabelOffsetY = yAxisLabelOffsetY
-    , mouseDown = mouseDown
-    , rangeX = rangeX
-    , rangeY = rangeY
-    , xZoom = xZoom
-    , yZoom = yZoom
-    , hovered = hovered
-    , moved = moved
-    , movedSinceMouseDown = movedSinceMouseDown
+toModel config_ state_ =
+    let
+        (Config config) =
+            config_
+
+        (State state) =
+            state_
+    in
+    { lines = config.lines
+    , xAcc = config.xAcc
+    , yAcc = config.yAcc
+    , pointDecoder = config.pointDecoder
+    , width = config.width
+    , height = config.height
+    , xIsTime = config.xIsTime
+    , language = config.language
+    , numberFormat = config.numberFormat
+    , timezone = config.timezone
+    , showLegends = config.showLegends
+    , labelFunc = config.labelFunc
+    , xAxisLabel = config.xAxisLabel
+    , yAxisLabel = config.yAxisLabel
+    , marginTop = config.marginTop
+    , marginRight = config.marginRight
+    , marginBottom = config.marginBottom
+    , marginLeft = config.marginLeft
+    , xAxisLabelOffsetX = config.xAxisLabelOffsetX
+    , xAxisLabelOffsetY = config.xAxisLabelOffsetY
+    , yAxisLabelOffsetX = config.yAxisLabelOffsetX
+    , yAxisLabelOffsetY = config.yAxisLabelOffsetY
+    , mouseDown = state.mouseDown
+    , rangeX = state.rangeX
+    , rangeY = state.rangeY
+    , xZoom = state.xZoom
+    , yZoom = state.yZoom
+    , hovered = state.hovered
+    , moved = state.moved
+    , movedSinceMouseDown = state.movedSinceMouseDown
     }
 
 
@@ -556,7 +575,7 @@ draw toMsg state config =
             ]
          <|
             Element.html
-                (chart <| Model state config)
+                (chart <| toModel config state)
         )
 
 
@@ -572,14 +591,114 @@ drawHtml toMsg state config =
 
 
 
+---- MUTATING CONFIG ----
+
+
+xIsTime : Bool -> Config data -> Config data
+xIsTime bool (Config config) =
+    Config
+        { config | xIsTime = bool }
+
+
+language : Language -> Config data -> Config data
+language lang (Config config) =
+    Config
+        { config | language = lang }
+
+
+numberFormat : (Float -> String) -> Config data -> Config data
+numberFormat formatter (Config config) =
+    Config
+        { config | numberFormat = formatter }
+
+
+timezone : Time.Zone -> Config data -> Config data
+timezone tz (Config config) =
+    Config
+        { config | timezone = tz }
+
+
+showLegends : Bool -> Config data -> Config data
+showLegends bool (Config config) =
+    Config
+        { config | showLegends = bool }
+
+
+labelFunc : (data -> String) -> Config data -> Config data
+labelFunc func (Config config) =
+    Config
+        { config | labelFunc = func }
+
+
+xAxisLabel : String -> Config data -> Config data
+xAxisLabel label (Config config) =
+    Config
+        { config | xAxisLabel = label }
+
+
+yAxisLabel : String -> Config data -> Config data
+yAxisLabel label (Config config) =
+    Config
+        { config | yAxisLabel = label }
+
+
+marginTop : Float -> Config data -> Config data
+marginTop margin (Config config) =
+    Config
+        { config | marginTop = margin }
+
+
+marginRight : Float -> Config data -> Config data
+marginRight margin (Config config) =
+    Config
+        { config | marginRight = margin }
+
+
+marginBottom : Float -> Config data -> Config data
+marginBottom margin (Config config) =
+    Config
+        { config | marginBottom = margin }
+
+
+marginLeft : Float -> Config data -> Config data
+marginLeft margin (Config config) =
+    Config
+        { config | marginLeft = margin }
+
+
+xAxisLabelOffsetX : Float -> Config data -> Config data
+xAxisLabelOffsetX offset (Config config) =
+    Config
+        { config | xAxisLabelOffsetX = offset }
+
+
+xAxisLabelOffsetY : Float -> Config data -> Config data
+xAxisLabelOffsetY offset (Config config) =
+    Config
+        { config | xAxisLabelOffsetY = offset }
+
+
+yAxisLabelOffsetX : Float -> Config data -> Config data
+yAxisLabelOffsetX offset (Config config) =
+    Config
+        { config | yAxisLabelOffsetX = offset }
+
+
+yAxisLabelOffsetY : Float -> Config data -> Config data
+yAxisLabelOffsetY offset (Config config) =
+    Config
+        { config | yAxisLabelOffsetY = offset }
+
+
+
 ---- TIME PLOTTING STUFF ----
 
 
-customTimeTick : Config data -> Tick.Time -> Tick.Config msg
-customTimeTick config info =
+customTimeTick : Model data -> Tick.Time -> Tick.Config msg
+customTimeTick model info =
     let
         label =
-            customFormatRouter config info
+            customFormatRouter model info
     in
     Tick.custom
         { position = toFloat (Time.posixToMillis info.timestamp)
@@ -592,20 +711,20 @@ customTimeTick config info =
         }
 
 
-customFormatRouter : Config data -> Tick.Time -> String
-customFormatRouter config info =
+customFormatRouter : Model data -> Tick.Time -> String
+customFormatRouter model info =
     case ( info.isFirst, info.change ) of
         ( True, _ ) ->
-            customFormatFirst config info
+            customFormatFirst model info
 
         ( _, Just _ ) ->
-            customFormatChange config info
+            customFormatChange model info
 
         _ ->
-            customFormat config info
+            customFormat model info
 
 
-customFormatFirst : Config data -> Tick.Time -> String
+customFormatFirst : Model data -> Tick.Time -> String
 customFormatFirst { language, timezone } info =
     case ( info.timestamp, info.interval.unit ) of
         ( time, Tick.Millisecond ) ->
@@ -643,7 +762,7 @@ customFormatFirst { language, timezone } info =
                 time
 
 
-customFormat : Config data -> Tick.Time -> String
+customFormat : Model data -> Tick.Time -> String
 customFormat { language, timezone } info =
     case ( info.timestamp, info.interval.unit ) of
         ( time, Tick.Millisecond ) ->
@@ -694,7 +813,7 @@ customFormat { language, timezone } info =
                 time
 
 
-customFormatChange : Config data -> Tick.Time -> String
+customFormatChange : Model data -> Tick.Time -> String
 customFormatChange { language, timezone } info =
     case ( info.timestamp, info.interval.unit ) of
         ( time, Tick.Millisecond ) ->
@@ -723,17 +842,17 @@ customFormatChange { language, timezone } info =
 ---- CHART ----
 
 
-eventsConfig : Config data -> State data -> Events.Config data (Msg data)
-eventsConfig config (State state) =
+eventsConfig : Model data -> Events.Config data (Msg data)
+eventsConfig model =
     let
         myGetData : Events.Decoder data data
         myGetData =
-            Events.map config.pointDecoder Events.getData
+            Events.map model.pointDecoder Events.getData
     in
     Events.custom
         [ Events.onMouseDown MouseDown myGetData
         , Events.onMouseUp MouseUp myGetData
-        , case state.mouseDown of
+        , case model.mouseDown of
             Nothing ->
                 Events.onMouseMove Hover Events.getNearest
 
@@ -743,35 +862,35 @@ eventsConfig config (State state) =
         ]
 
 
-xAxisConfig : Float -> Config data -> State data -> Axis.Config data msg
-xAxisConfig width config (State state) =
+xAxisConfig : Model data -> Axis.Config data msg
+xAxisConfig model =
     Axis.custom
         { title =
             Title.atAxisMax
-                config.xAxisLabelOffsetX
-                config.xAxisLabelOffsetY
-                config.xAxisLabel
-        , variable = Just << config.xAcc
-        , pixels = round width
-        , range = setRange state.xZoom
+                model.xAxisLabelOffsetX
+                model.xAxisLabelOffsetY
+                model.xAxisLabel
+        , variable = Just << model.xAcc
+        , pixels = round model.width
+        , range = setRange model.xZoom
         , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = xTicksConfig config state.xZoom
+        , ticks = xTicksConfig model
         }
 
 
-yAxisConfig : Float -> Config data -> State data -> Axis.Config data msg
-yAxisConfig height config (State state) =
+yAxisConfig : Model data -> Axis.Config data msg
+yAxisConfig model =
     Axis.custom
         { title =
             Title.atAxisMax
-                config.yAxisLabelOffsetX
-                config.yAxisLabelOffsetY
-                config.yAxisLabel
-        , variable = Just << config.yAcc
-        , pixels = round height
-        , range = setRange state.yZoom
+                model.yAxisLabelOffsetX
+                model.yAxisLabelOffsetY
+                model.yAxisLabel
+        , variable = Just << model.yAcc
+        , pixels = round model.height
+        , range = setRange model.yZoom
         , axisLine = AxisLine.rangeFrame Colors.black
-        , ticks = Ticks.floatCustom 4 (customTick config.numberFormat)
+        , ticks = Ticks.floatCustom 4 (customTick model.numberFormat)
         }
 
 
@@ -795,24 +914,24 @@ valuesWithin =
     Values.time Time.utc 5
 
 
-xTicksConfig : Config data -> Zoom -> Ticks.Config msg
-xTicksConfig config zoom =
-    if config.xIsTime then
+xTicksConfig : Model data -> Ticks.Config msg
+xTicksConfig model =
+    if model.xIsTime then
         Ticks.custom <|
             \dataRange axisRange ->
                 let
                     range =
-                        case zoom of
+                        case model.xZoom of
                             UnZoomed ->
                                 dataRange
 
                             Zoomed _ _ ->
                                 axisRange
                 in
-                List.map (customTimeTick config) (valuesWithin range)
+                List.map (customTimeTick model) (valuesWithin range)
 
     else
-        Ticks.floatCustom 7 (customTick config.numberFormat)
+        Ticks.floatCustom 7 (customTick model.numberFormat)
 
 
 customTick : (Float -> String) -> Float -> Tick.Config msg
@@ -837,30 +956,30 @@ fontSize =
     14
 
 
-containerConfig : Config data -> Container.Config msg
-containerConfig config =
+containerConfig : Model data -> Container.Config msg
+containerConfig model =
     Container.custom
         { attributesHtml = []
         , attributesSvg = [ SvgAttrPx.fontSize fontSize ]
         , size = Container.relative
         , margin =
-            { top = config.marginTop
-            , bottom = config.marginBottom
-            , left = config.marginLeft
-            , right = config.marginRight
+            { top = model.marginTop
+            , bottom = model.marginBottom
+            , left = model.marginLeft
+            , right = model.marginRight
             }
         , id = "whatever"
         }
 
 
-dragBox : Config data -> data -> data -> Coordinate.System -> Svg msg
-dragBox config a b system =
+dragBox : Model data -> data -> data -> Coordinate.System -> Svg msg
+dragBox model a b system =
     let
         xAcc =
-            config.xAcc
+            model.xAcc
 
         yAcc =
-            config.yAcc
+            model.yAcc
     in
     Junk.rectangle system
         [ SvgAttr.fill <| Fill Colors.grayLightest ]
@@ -876,29 +995,29 @@ type Hover
 
 
 hoverJunk :
-    Config data
+    Model data
     -> data
     -> Coordinate.System
     -> Svg (Msg data)
-hoverJunk config hovered sys =
+hoverJunk model hovered sys =
     let
         xAcc =
-            config.xAcc
+            model.xAcc
 
         yAcc =
-            config.yAcc
+            model.yAcc
 
         xIsTime =
-            config.xIsTime
+            model.xIsTime
 
         customLabel =
-            config.labelFunc hovered
+            model.labelFunc hovered
 
         textDate =
             if xIsTime then
                 TimeHelpers.posixToDate
-                    config.language
-                    config.timezone
+                    model.language
+                    model.timezone
                     (Time.millisToPosix <| round (xAcc hovered))
 
             else
@@ -907,15 +1026,15 @@ hoverJunk config hovered sys =
         textX =
             if xIsTime then
                 TimeHelpers.posixToTimeWithSeconds
-                    config.language
-                    config.timezone
+                    model.language
+                    model.timezone
                     (Time.millisToPosix <| round (xAcc hovered))
 
             else
-                config.numberFormat (xAcc hovered)
+                model.numberFormat (xAcc hovered)
 
         textY =
-            config.numberFormat (yAcc hovered)
+            model.numberFormat (yAcc hovered)
 
         mySvgText : Float -> String -> Bool -> Svg (Msg data)
         mySvgText fontHeights str bigWhite =
@@ -962,11 +1081,11 @@ hoverJunk config hovered sys =
         svgList
 
 
-junkConfig : Config data -> State data -> Junk.Config data (Msg data)
-junkConfig config (State state) =
-    case state.mouseDown of
+junkConfig : Model data -> Junk.Config data (Msg data)
+junkConfig model =
+    case model.mouseDown of
         Nothing ->
-            case state.hovered of
+            case model.hovered of
                 Nothing ->
                     Junk.default
 
@@ -976,7 +1095,7 @@ junkConfig config (State state) =
                             { below = []
                             , above =
                                 [ hoverJunk
-                                    config
+                                    model
                                     hovered
                                     sys
                                 ]
@@ -985,7 +1104,7 @@ junkConfig config (State state) =
                         )
 
         Just downPoint ->
-            case state.moved of
+            case model.moved of
                 Nothing ->
                     Junk.default
 
@@ -994,7 +1113,7 @@ junkConfig config (State state) =
                         (\sys ->
                             { below =
                                 [ dragBox
-                                    config
+                                    model
                                     downPoint
                                     movedPoint
                                     sys
@@ -1041,11 +1160,11 @@ chartConfig :
 chartConfig model =
     { x = xAxisConfig model
     , y = yAxisConfig model
-    , container = containerConfig config
+    , container = containerConfig model
     , interpolation = Interpolation.default
     , intersection = Intersection.default
     , legends =
-        if config_.showLegends then
+        if model.showLegends then
             Legends.default
 
         else
@@ -1055,19 +1174,15 @@ chartConfig model =
     , grid = Grid.default
     , area = Area.default
     , line = Line.default
-    , dots = dotsConfig state_.hovered
+    , dots = dotsConfig model.hovered
     }
 
 
 chart : Model data -> Svg (Msg data)
-chart ({ config } as model) =
-    let
-        (Config config_) =
-            config
-    in
+chart model =
     viewCustom
         (chartConfig model)
-        config_.lines
+        model.lines
 
 
 type XY
@@ -1076,7 +1191,7 @@ type XY
 
 
 newRange : Config data -> State data -> data -> XY -> ( Maybe Range, Zoom )
-newRange config (State state) mouseUp xy =
+newRange (Config config) (State state) mouseUp xy =
     case state.mouseDown of
         Just a ->
             let
