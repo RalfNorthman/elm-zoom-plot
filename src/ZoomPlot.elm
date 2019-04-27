@@ -725,53 +725,67 @@ customFormatRouter model info =
 
 
 customFormatFirst : Model data -> Tick.Time -> String
-customFormatFirst { language, timezone } info =
+customFormatFirst model info =
+    let
+        lang =
+            model.language
+
+        tz =
+            model.timezone
+    in
     case ( info.timestamp, info.interval.unit ) of
         ( time, Tick.Millisecond ) ->
-            posixToTimeWithSeconds language timezone time
+            posixToTimeWithSeconds lang tz time
                 ++ format
                     [ Format.text "."
                     , Format.millisecondFixed
                     ]
-                    language
-                    timezone
+                    lang
+                    tz
                     time
 
         ( time, Tick.Second ) ->
-            posixToTimeWithSeconds language timezone time
+            posixToTimeWithSeconds lang tz time
 
         ( time, Tick.Minute ) ->
-            posixToTime language timezone time
+            posixToTime lang tz time
 
         ( time, Tick.Hour ) ->
-            posixToNameDate language timezone time
+            posixToNameDate lang tz time
                 ++ " "
-                ++ posixToTime language timezone time
+                ++ posixToTime lang tz time
 
         ( time, Tick.Day ) ->
-            posixToNameDate language timezone time
+            posixToNameDate lang tz time
 
         ( time, Tick.Month ) ->
-            posixToMonthNameYear language timezone time
+            posixToMonthNameYear lang tz time
 
         ( time, Tick.Year ) ->
             format
                 [ Format.yearNumber ]
-                language
-                timezone
+                lang
+                tz
                 time
 
 
 customFormat : Model data -> Tick.Time -> String
-customFormat { language, timezone } info =
+customFormat model info =
+    let
+        lang =
+            model.language
+
+        tz =
+            model.timezone
+    in
     case ( info.timestamp, info.interval.unit ) of
         ( time, Tick.Millisecond ) ->
             format
                 [ Format.text "."
                 , Format.millisecondFixed
                 ]
-                language
-                timezone
+                lang
+                tz
                 time
 
         ( time, Tick.Second ) ->
@@ -779,8 +793,8 @@ customFormat { language, timezone } info =
                 [ Format.text ":"
                 , Format.secondFixed
                 ]
-                language
-                timezone
+                lang
+                tz
                 time
 
         ( time, Tick.Minute ) ->
@@ -788,51 +802,58 @@ customFormat { language, timezone } info =
                 [ Format.text ":"
                 , Format.minuteFixed
                 ]
-                language
-                timezone
+                lang
+                tz
                 time
 
         ( time, Tick.Hour ) ->
-            posixToTime language timezone time
+            posixToTime lang tz time
 
         ( time, Tick.Day ) ->
-            posixToNameDate language timezone time
+            posixToNameDate lang tz time
 
         ( time, Tick.Month ) ->
             format
                 [ Format.monthNameAbbreviated ]
-                language
-                timezone
+                lang
+                tz
                 time
 
         ( time, Tick.Year ) ->
             format
                 [ Format.yearNumber ]
-                language
-                timezone
+                lang
+                tz
                 time
 
 
 customFormatChange : Model data -> Tick.Time -> String
-customFormatChange { language, timezone } info =
+customFormatChange model info =
+    let
+        lang =
+            model.language
+
+        tz =
+            model.timezone
+    in
     case ( info.timestamp, info.interval.unit ) of
         ( time, Tick.Millisecond ) ->
-            posixToTimeWithSeconds language timezone time
+            posixToTimeWithSeconds lang tz time
 
         ( time, Tick.Second ) ->
-            posixToTime language timezone time
+            posixToTime lang tz time
 
         ( time, Tick.Minute ) ->
-            posixToTime language timezone time
+            posixToTime lang tz time
 
         ( time, Tick.Hour ) ->
-            posixToNameDate language timezone time
+            posixToNameDate lang tz time
 
         ( time, Tick.Day ) ->
-            posixToNameDate language timezone time
+            posixToNameDate lang tz time
 
         ( time, Tick.Month ) ->
-            posixToMonthNameYear language timezone time
+            posixToMonthNameYear lang tz time
 
         ( time, Tick.Year ) ->
             "huh"
@@ -1007,14 +1028,11 @@ hoverJunk model hovered sys =
         yAcc =
             model.yAcc
 
-        xIsTime =
-            model.xIsTime
-
         customLabel =
             model.labelFunc hovered
 
         textDate =
-            if xIsTime then
+            if model.xIsTime then
                 TimeHelpers.posixToDate
                     model.language
                     model.timezone
@@ -1024,7 +1042,7 @@ hoverJunk model hovered sys =
                 ""
 
         textX =
-            if xIsTime then
+            if model.xIsTime then
                 TimeHelpers.posixToTimeWithSeconds
                     model.language
                     model.timezone
