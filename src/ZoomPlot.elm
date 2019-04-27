@@ -1,13 +1,12 @@
 module ZoomPlot exposing
-    ( easyConfig
-    , State
+    ( State
     , init
     , Msg
     , draw
     , drawHtml
     , update
-    , defaultConfigWith
     , Config
+    , custom, points
     )
 
 {-|
@@ -248,28 +247,152 @@ defaultFormat number =
         number
 
 
+{-| You need to store the internal state of the plot in your model.
+
+It can be as simple as:
+
+    type alias Model =
+        { plotState : Plot.State Point }
+
+or if you have multiple plots on your page:
+
+    type alias Model =
+        { plot1 : Plot.State Point
+        , plot2 : Plot.State Point
+        , plot3 : Plot.State Point
+        }
+
+-}
+type State data
+    = State
+        { mouseDown : Maybe data
+        , rangeX : Maybe Range
+        , rangeY : Maybe Range
+        , xZoom : Zoom
+        , yZoom : Zoom
+        , hovered : Maybe data
+        , moved : Maybe data
+        , movedSinceMouseDown : Int
+        }
+
+
+{-| All plots have the same initial state regardless of individual configuration.
+
+    init : Model
+    init =
+        { plot1 = Plot.init
+        , plot2 = Plot.init
+        , plot3 = Plot.init
+        }
+
+-}
+init : State data
+init =
+    State
+        { mouseDown = Nothing
+        , rangeX = Nothing
+        , rangeY = Nothing
+        , xZoom = UnZoomed
+        , yZoom = UnZoomed
+        , hovered = Nothing
+        , moved = Nothing
+        , movedSinceMouseDown = 0
+        }
+
+
+{-| Include it within a constructor for easy pattern matching in your update function:
+
+    type Msg
+        = MyPlotMsg (Plot.Msg Point)
+        | MsgNotConcerningPlots
+
+or if you need routing for several plots:
+
+    type PlotNr
+        = Plot1
+        | Plot2
+        | Plot3
+
+    type Msg
+        = ToPlot PlotNr (Plot.Msg ExampleType)
+
+-}
+type Msg data
+    = MouseDown data
+    | MouseUp data
+    | Hover (Maybe data)
+    | Move data
+    | MouseLeave
+    | ResetZoom
+
+
 {-| -}
-type alias Config data =
-    { lines : List (Series data)
-    , xAcc : data -> Float
-    , yAcc : data -> Float
-    , pointDecoder : Point -> data
-    , xIsTime : Bool
-    , language : Language
-    , numberFormat : Float -> String
-    , timezone : Time.Zone
-    , showLegends : Bool
-    , labelFunc : data -> String
-    , xAxisLabel : String
-    , yAxisLabel : String
-    , marginTop : Float
-    , marginRight : Float
-    , marginBottom : Float
-    , marginLeft : Float
-    , xAxisLabelOffsetX : Float
-    , xAxisLabelOffsetY : Float
-    , yAxisLabelOffsetX : Float
-    , yAxisLabelOffsetY : Float
+type Config data
+    = Config
+        { lines : List (Series data)
+        , xAcc : data -> Float
+        , yAcc : data -> Float
+        , pointDecoder : Point -> data
+        , width : Float
+        , height : Float
+        , xIsTime : Bool
+        , language : Language
+        , numberFormat : Float -> String
+        , timezone : Time.Zone
+        , showLegends : Bool
+        , labelFunc : data -> String
+        , xAxisLabel : String
+        , yAxisLabel : String
+        , marginTop : Float
+        , marginRight : Float
+        , marginBottom : Float
+        , marginLeft : Float
+        , xAxisLabelOffsetX : Float
+        , xAxisLabelOffsetY : Float
+        , yAxisLabelOffsetX : Float
+        , yAxisLabelOffsetY : Float
+        }
+
+
+{-| Use this configuration as a starting point when your data is just a `List Point`:
+
+    type alias Point =
+        { x : Float, y : Float }
+
+    points =
+        [ Point 11 120
+        , Point 12 121
+        , Point 13 120.5
+        ]
+
+    myConfig =
+        Plot.easyConfig points
+
+-}
+points : List Point -> Config Point
+points points_ =
+    { lines = [ LineChart.line Colors.rust Dots.circle "" points_ ]
+    , xAcc = .x
+    , yAcc = .y
+    , pointDecoder = \p -> p
+    , width = 800
+    , height = 450
+    , xIsTime = False
+    , language = english
+    , numberFormat = defaultFormat
+    , timezone = Time.utc
+    , showLegends = False
+    , labelFunc = \_ -> ""
+    , xAxisLabel = ""
+    , yAxisLabel = ""
+    , marginTop = 20
+    , marginRight = 30
+    , marginBottom = 30
+    , marginLeft = 60
+    , xAxisLabelOffsetX = 0
+    , xAxisLabelOffsetY = 0
+    , yAxisLabelOffsetX = 0
+    , yAxisLabelOffsetY = 0
     }
 
 
@@ -305,17 +428,20 @@ It also needs a _point decoder_. The internals of the package needs a way to con
         ExampleType decodedX y "" 0
 
 -}
-defaultConfigWith :
-    List data
-    -> (data -> Float)
-    -> (data -> Float)
-    -> (Point -> data)
+custom :
+    { lines : List (LineChart.Series data)
+    , xAcc : data -> Float
+    , yAcc : data -> Float
+    , pointDecoder : Point -> data
+    }
     -> Config data
-defaultConfigWith dataList xAcc yAcc pointDecoder =
-    { lines = [ LineChart.line Colors.tealLight Dots.circle "" dataList ]
+custom { lines, xAcc, yAcc, pointDecoder } =
+    { lines = lines
     , xAcc = xAcc
     , yAcc = yAcc
     , pointDecoder = pointDecoder
+    , width = 800
+    , height = 450
     , xIsTime = False
     , language = english
     , numberFormat = defaultFormat
@@ -335,43 +461,9 @@ defaultConfigWith dataList xAcc yAcc pointDecoder =
     }
 
 
-{-| Use this configuration as a starting point when your data is just a `List Point`:
-
-    type alias Point =
-        { x : Float, y : Float }
-
-    points =
-        [ Point 11 120
-        , Point 12 121
-        , Point 13 120.5
-        ]
-
-    myConfig =
-        Plot.easyConfig points
-
--}
-easyConfig : List Point -> Config Point
-easyConfig points =
-    { lines = [ LineChart.line Colors.tealLight Dots.circle "" points ]
-    , xAcc = .x
-    , yAcc = .y
-    , pointDecoder = \p -> p
-    , xIsTime = False
-    , language = english
-    , numberFormat = defaultFormat
-    , timezone = Time.utc
-    , showLegends = False
-    , labelFunc = \_ -> ""
-    , xAxisLabel = ""
-    , yAxisLabel = ""
-    , marginTop = 20
-    , marginRight = 30
-    , marginBottom = 30
-    , marginLeft = 60
-    , xAxisLabelOffsetX = 0
-    , xAxisLabelOffsetY = 0
-    , yAxisLabelOffsetX = 0
-    , yAxisLabelOffsetY = 0
+type alias Model data =
+    { state : State data
+    , config : Config data
     }
 
 
@@ -399,13 +491,11 @@ Small dimension values in large containers can make the text in the plot unreaso
 
 -}
 draw :
-    Float
-    -> Float
-    -> Config data
+    (Msg data -> msg)
     -> State data
-    -> (Msg data -> msg)
+    -> Config data
     -> Element msg
-draw width height config state toMsg =
+draw toMsg state config =
     Element.map toMsg
         (Element.el
             [ Element.width Element.fill
@@ -413,21 +503,19 @@ draw width height config state toMsg =
             ]
          <|
             Element.html
-                (chart width height config state)
+                (chart <| Model state config)
         )
 
 
 {-| If you, for some reason, are not using [mdgriffith/elm-ui](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest) you can use this draw function instead which outputs regular `Html msg`.
 -}
 drawHtml :
-    Float
-    -> Float
-    -> Config data
+    (Msg data -> msg)
     -> State data
-    -> (Msg data -> msg)
+    -> Config data
     -> Html msg
-drawHtml width height config state toMsg =
-    Element.layout [] <| draw width height config state toMsg
+drawHtml toMsg state config =
+    Element.layout [] <| draw toMsg state config
 
 
 
@@ -895,25 +983,29 @@ dotsConfig hovered =
 
 
 chartConfig :
-    Float
-    -> Float
-    -> Config data
-    -> State data
+    Model data
     -> LineChart.Config data (Msg data)
-chartConfig width height config ((State state_) as state) =
-    { x = xAxisConfig width config state
-    , y = yAxisConfig height config state
+chartConfig ({ state, config } as model) =
+    let
+        (State state_) =
+            state
+
+        (Config config_) =
+            config
+    in
+    { x = xAxisConfig model
+    , y = yAxisConfig model
     , container = containerConfig config
     , interpolation = Interpolation.default
     , intersection = Intersection.default
     , legends =
-        if config.showLegends then
+        if config_.showLegends then
             Legends.default
 
         else
             Legends.none
-    , events = eventsConfig config state
-    , junk = junkConfig config state
+    , events = eventsConfig model
+    , junk = junkConfig model
     , grid = Grid.default
     , area = Area.default
     , line = Line.default
@@ -921,90 +1013,15 @@ chartConfig width height config ((State state_) as state) =
     }
 
 
-chart : Float -> Float -> Config data -> State data -> Svg (Msg data)
-chart width height config state =
+chart : Model data -> Svg (Msg data)
+chart ({ config } as model) =
+    let
+        (Config config_) =
+            config
+    in
     viewCustom
-        (chartConfig width height config state)
-        config.lines
-
-
-{-| You need to store the internal state of the plot in your model.
-
-It can be as simple as:
-
-    type alias Model =
-        { plotState : Plot.State Point }
-
-or if you have multiple plots on your page:
-
-    type alias Model =
-        { plot1 : Plot.State Point
-        , plot2 : Plot.State Point
-        , plot3 : Plot.State Point
-        }
-
--}
-type State data
-    = State
-        { mouseDown : Maybe data
-        , rangeX : Maybe Range
-        , rangeY : Maybe Range
-        , xZoom : Zoom
-        , yZoom : Zoom
-        , hovered : Maybe data
-        , moved : Maybe data
-        , movedSinceMouseDown : Int
-        }
-
-
-{-| Include it within a constructor for easy pattern matching in your update function:
-
-    type Msg
-        = MyPlotMsg (Plot.Msg Point)
-        | MsgNotConcerningPlots
-
-or if you need routing for several plots:
-
-    type PlotNr
-        = Plot1
-        | Plot2
-        | Plot3
-
-    type Msg
-        = ToPlot PlotNr (Plot.Msg ExampleType)
-
--}
-type Msg data
-    = MouseDown data
-    | MouseUp data
-    | Hover (Maybe data)
-    | Move data
-    | MouseLeave
-    | ResetZoom
-
-
-{-| All plots have the same initial state regardless of individual configuration.
-
-    init : Model
-    init =
-        { plot1 = Plot.init
-        , plot2 = Plot.init
-        , plot3 = Plot.init
-        }
-
--}
-init : State data
-init =
-    State
-        { mouseDown = Nothing
-        , rangeX = Nothing
-        , rangeY = Nothing
-        , xZoom = UnZoomed
-        , yZoom = UnZoomed
-        , hovered = Nothing
-        , moved = Nothing
-        , movedSinceMouseDown = 0
-        }
+        (chartConfig model)
+        config_.lines
 
 
 type XY
