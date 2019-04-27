@@ -47,6 +47,8 @@ update msg model =
 view : Model -> Html Msg
 view model =
     Plot.points myPoints
+        |> Plot.width 1920
+        |> Plot.height 400
         |> Plot.drawHtml
             MyPlotMsg
             model.plotState
