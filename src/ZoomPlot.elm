@@ -300,6 +300,12 @@ init =
         }
 
 
+type alias Accessors data =
+    { x : data -> Float
+    , y : data -> Float
+    }
+
+
 {-| Include it within a constructor for easy pattern matching in your update function:
 
     type Msg
@@ -318,8 +324,8 @@ or if you need routing for several plots:
 
 -}
 type Msg data
-    = MouseDown data
-    | MouseUp data
+    = MouseDown (Accessors data) data
+    | MouseUp (Accessors data) data
     | Hover (Maybe data)
     | Move data
     | MouseLeave
@@ -869,10 +875,13 @@ eventsConfig model =
         myGetData : Events.Decoder data data
         myGetData =
             Events.map model.pointDecoder Events.getData
+
+        accs =
+            { x = model.xAcc, y = model.yAcc }
     in
     Events.custom
-        [ Events.onMouseDown MouseDown myGetData
-        , Events.onMouseUp MouseUp myGetData
+        [ Events.onMouseDown (MouseDown accs) myGetData
+        , Events.onMouseUp (MouseUp accs) myGetData
         , case model.mouseDown of
             Nothing ->
                 Events.onMouseMove Hover Events.getNearest
@@ -1208,8 +1217,8 @@ type XY
     | Y
 
 
-newRange : Config data -> State data -> data -> XY -> ( Maybe Range, Zoom )
-newRange (Config config) (State state) mouseUp xy =
+newRange : Accessors data -> State data -> data -> XY -> ( Maybe Range, Zoom )
+newRange accs (State state) mouseUp xy =
     case state.mouseDown of
         Just a ->
             let
@@ -1219,10 +1228,10 @@ newRange (Config config) (State state) mouseUp xy =
                 acc =
                     case xy of
                         X ->
-                            config.xAcc
+                            accs.x
 
                         Y ->
-                            config.yAcc
+                            accs.y
 
                 zoomMin =
                     min (acc a) (acc b)
@@ -1242,14 +1251,14 @@ newRange (Config config) (State state) mouseUp xy =
             ( Nothing, UnZoomed )
 
 
-zoomUpdate : Config data -> State data -> data -> State data
-zoomUpdate config ((State state_) as state) point =
+zoomUpdate : Accessors data -> State data -> data -> State data
+zoomUpdate accs ((State state_) as state) point =
     let
         ( rx, xc ) =
-            newRange config state point X
+            newRange accs state point X
 
         ( ry, yc ) =
-            newRange config state point Y
+            newRange accs state point Y
     in
     State
         { state_
@@ -1307,7 +1316,7 @@ If you need routing to update multiple plots:
 update : Config data -> Msg data -> State data -> State data
 update config msg ((State state_) as state) =
     case msg of
-        MouseDown point ->
+        MouseDown accs point ->
             case state_.mouseDown of
                 Nothing ->
                     State
@@ -1318,12 +1327,12 @@ update config msg ((State state_) as state) =
                         }
 
                 Just oldPoint ->
-                    zoomUpdate config state point
+                    zoomUpdate accs state point
 
-        MouseUp point ->
+        MouseUp accs point ->
             case state_.mouseDown of
                 Just _ ->
-                    zoomUpdate config state point
+                    zoomUpdate accs state point
 
                 Nothing ->
                     state

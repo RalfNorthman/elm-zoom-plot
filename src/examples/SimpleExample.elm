@@ -9,7 +9,7 @@ type alias Point =
     { x : Float, y : Float }
 
 
-points =
+myPoints =
     [ Point 11 120
     , Point 12 121
     , Point 13 120.5
@@ -20,10 +20,6 @@ points =
     , Point 18 120
     , Point 19 118
     ]
-
-
-myConfig =
-    Plot.easyConfig points
 
 
 type alias Model =
@@ -50,12 +46,10 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    Plot.drawHtml
-        800
-        600
-        myConfig
-        model.plotState
-        MyPlotMsg
+    Plot.points myPoints
+        |> Plot.drawHtml
+            model.plotState
+            MyPlotMsg
 
 
 main =
