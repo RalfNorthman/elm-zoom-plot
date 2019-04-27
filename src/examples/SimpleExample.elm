@@ -32,13 +32,13 @@ init =
 
 
 type Msg
-    = MyPlotMsg (Plot.Msg Point)
+    = ToPlot (Plot.Msg Point)
 
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        MyPlotMsg plotMsg ->
+        ToPlot plotMsg ->
             { model
                 | plotState = Plot.update plotMsg model.plotState
             }
@@ -46,12 +46,13 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    Plot.points myPoints
+    Plot.points
+        { toMsg = ToPlot
+        , data = myPoints
+        }
         |> Plot.width 1920
         |> Plot.height 400
-        |> Plot.drawHtml
-            MyPlotMsg
-            model.plotState
+        |> Plot.drawHtml model.plotState
 
 
 main =

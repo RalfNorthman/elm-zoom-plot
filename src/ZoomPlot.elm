@@ -333,9 +333,10 @@ type Msg data
 
 
 {-| -}
-type Config data
+type Config data msg
     = Config
         { lines : List (Series data)
+        , toMsg : Msg data -> msg
         , xAcc : data -> Float
         , yAcc : data -> Float
         , pointDecoder : Point -> data
@@ -375,10 +376,16 @@ type Config data
         Plot.easyConfig points
 
 -}
-points : List Point -> Config Point
-points points_ =
+points :
+    { toMsg :
+        Msg Point -> msg
+    , data : List Point
+    }
+    -> Config Point msg
+points { toMsg, data } =
     Config
-        { lines = [ LineChart.line Colors.rust Dots.circle "" points_ ]
+        { lines = [ LineChart.line Colors.rust Dots.circle "" data ]
+        , toMsg = toMsg
         , xAcc = .x
         , yAcc = .y
         , pointDecoder = \p -> p
@@ -437,14 +444,16 @@ It also needs a _point decoder_. The internals of the package needs a way to con
 -}
 custom :
     { lines : List (LineChart.Series data)
+    , toMsg : Msg data -> msg
     , xAcc : data -> Float
     , yAcc : data -> Float
     , pointDecoder : Point -> data
     }
-    -> Config data
-custom { lines, xAcc, yAcc, pointDecoder } =
+    -> Config data msg
+custom { lines, toMsg, xAcc, yAcc, pointDecoder } =
     Config
         { lines = lines
+        , toMsg = toMsg
         , xAcc = xAcc
         , yAcc = yAcc
         , pointDecoder = pointDecoder
@@ -503,7 +512,7 @@ type alias Model data =
     }
 
 
-toModel : Config data -> State data -> Model data
+toModel : Config data msg -> State data -> Model data
 toModel config_ state_ =
     let
         (Config config) =
@@ -569,11 +578,10 @@ Small dimension values in large containers can make the text in the plot unreaso
 
 -}
 draw :
-    (Msg data -> msg)
-    -> State data
-    -> Config data
+    State data
+    -> Config data msg
     -> Element msg
-draw toMsg state config =
+draw state ((Config { toMsg }) as config) =
     Element.map toMsg
         (Element.el
             [ Element.width Element.fill
@@ -588,121 +596,120 @@ draw toMsg state config =
 {-| If you, for some reason, are not using [mdgriffith/elm-ui](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest) you can use this draw function instead which outputs regular `Html msg`.
 -}
 drawHtml :
-    (Msg data -> msg)
-    -> State data
-    -> Config data
+    State data
+    -> Config data msg
     -> Html msg
-drawHtml toMsg state config =
-    Element.layout [] <| draw toMsg state config
+drawHtml state config =
+    Element.layout [] <| draw state config
 
 
 
 ---- MUTATING CONFIG ----
 
 
-width : Float -> Config data -> Config data
+width : Float -> Config data msg -> Config data msg
 width n (Config config) =
     Config
         { config | width = n }
 
 
-height : Float -> Config data -> Config data
+height : Float -> Config data msg -> Config data msg
 height n (Config config) =
     Config
         { config | height = n }
 
 
-xIsTime : Bool -> Config data -> Config data
+xIsTime : Bool -> Config data msg -> Config data msg
 xIsTime bool (Config config) =
     Config
         { config | xIsTime = bool }
 
 
-language : Language -> Config data -> Config data
+language : Language -> Config data msg -> Config data msg
 language lang (Config config) =
     Config
         { config | language = lang }
 
 
-numberFormat : (Float -> String) -> Config data -> Config data
+numberFormat : (Float -> String) -> Config data msg -> Config data msg
 numberFormat formatter (Config config) =
     Config
         { config | numberFormat = formatter }
 
 
-timezone : Time.Zone -> Config data -> Config data
+timezone : Time.Zone -> Config data msg -> Config data msg
 timezone tz (Config config) =
     Config
         { config | timezone = tz }
 
 
-showLegends : Bool -> Config data -> Config data
+showLegends : Bool -> Config data msg -> Config data msg
 showLegends bool (Config config) =
     Config
         { config | showLegends = bool }
 
 
-labelFunc : (data -> String) -> Config data -> Config data
+labelFunc : (data -> String) -> Config data msg -> Config data msg
 labelFunc func (Config config) =
     Config
         { config | labelFunc = func }
 
 
-xAxisLabel : String -> Config data -> Config data
+xAxisLabel : String -> Config data msg -> Config data msg
 xAxisLabel label (Config config) =
     Config
         { config | xAxisLabel = label }
 
 
-yAxisLabel : String -> Config data -> Config data
+yAxisLabel : String -> Config data msg -> Config data msg
 yAxisLabel label (Config config) =
     Config
         { config | yAxisLabel = label }
 
 
-marginTop : Float -> Config data -> Config data
+marginTop : Float -> Config data msg -> Config data msg
 marginTop margin (Config config) =
     Config
         { config | marginTop = margin }
 
 
-marginRight : Float -> Config data -> Config data
+marginRight : Float -> Config data msg -> Config data msg
 marginRight margin (Config config) =
     Config
         { config | marginRight = margin }
 
 
-marginBottom : Float -> Config data -> Config data
+marginBottom : Float -> Config data msg -> Config data msg
 marginBottom margin (Config config) =
     Config
         { config | marginBottom = margin }
 
 
-marginLeft : Float -> Config data -> Config data
+marginLeft : Float -> Config data msg -> Config data msg
 marginLeft margin (Config config) =
     Config
         { config | marginLeft = margin }
 
 
-xAxisLabelOffsetX : Float -> Config data -> Config data
+xAxisLabelOffsetX : Float -> Config data msg -> Config data msg
 xAxisLabelOffsetX offset (Config config) =
     Config
         { config | xAxisLabelOffsetX = offset }
 
 
-xAxisLabelOffsetY : Float -> Config data -> Config data
+xAxisLabelOffsetY : Float -> Config data msg -> Config data msg
 xAxisLabelOffsetY offset (Config config) =
     Config
         { config | xAxisLabelOffsetY = offset }
 
 
-yAxisLabelOffsetX : Float -> Config data -> Config data
+yAxisLabelOffsetX : Float -> Config data msg -> Config data msg
 yAxisLabelOffsetX offset (Config config) =
     Config
         { config | yAxisLabelOffsetX = offset }
 
 
-yAxisLabelOffsetY : Float -> Config data -> Config data
+yAxisLabelOffsetY : Float -> Config data msg -> Config data msg
 yAxisLabelOffsetY offset (Config config) =
     Config
         { config | yAxisLabelOffsetY = offset }
