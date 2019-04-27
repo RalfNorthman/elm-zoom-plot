@@ -354,24 +354,9 @@ type Config data
         }
 
 
-{-| Use this configuration as a starting point when your data is just a `List Point`:
-
-    type alias Point =
-        { x : Float, y : Float }
-
-    points =
-        [ Point 11 120
-        , Point 12 121
-        , Point 13 120.5
-        ]
-
-    myConfig =
-        Plot.easyConfig points
-
--}
-points : List Point -> Config Point
-points points_ =
-    { lines = [ LineChart.line Colors.rust Dots.circle "" points_ ]
+defaults : Config data
+defaults =
+    { lines = []
     , xAcc = .x
     , yAcc = .y
     , pointDecoder = \p -> p
@@ -393,6 +378,28 @@ points points_ =
     , xAxisLabelOffsetY = 0
     , yAxisLabelOffsetX = 0
     , yAxisLabelOffsetY = 0
+    }
+
+
+{-| Use this configuration as a starting point when your data is just a `List Point`:
+
+    type alias Point =
+        { x : Float, y : Float }
+
+    points =
+        [ Point 11 120
+        , Point 12 121
+        , Point 13 120.5
+        ]
+
+    myConfig =
+        Plot.easyConfig points
+
+-}
+points : List Point -> Config Point
+points points_ =
+    { defaults
+        | lines = [ LineChart.line Colors.rust Dots.circle "" points_ ]
     }
 
 
@@ -436,34 +443,80 @@ custom :
     }
     -> Config data
 custom { lines, xAcc, yAcc, pointDecoder } =
-    { lines = lines
-    , xAcc = xAcc
-    , yAcc = yAcc
-    , pointDecoder = pointDecoder
-    , width = 800
-    , height = 450
-    , xIsTime = False
-    , language = english
-    , numberFormat = defaultFormat
-    , timezone = Time.utc
-    , showLegends = False
-    , labelFunc = \_ -> ""
-    , xAxisLabel = ""
-    , yAxisLabel = ""
-    , marginTop = 20
-    , marginRight = 30
-    , marginBottom = 30
-    , marginLeft = 60
-    , xAxisLabelOffsetX = 0
-    , xAxisLabelOffsetY = 0
-    , yAxisLabelOffsetX = 0
-    , yAxisLabelOffsetY = 0
+    { defaults
+        | lines = lines
+        , xAcc = xAcc
+        , yAcc = yAcc
+        , pointDecoder = pointDecoder
     }
 
 
 type alias Model data =
-    { state : State data
-    , config : Config data
+    { lines : List (Series data)
+    , xAcc : data -> Float
+    , yAcc : data -> Float
+    , pointDecoder : Point -> data
+    , width : Float
+    , height : Float
+    , xIsTime : Bool
+    , language : Language
+    , numberFormat : Float -> String
+    , timezone : Time.Zone
+    , showLegends : Bool
+    , labelFunc : data -> String
+    , xAxisLabel : String
+    , yAxisLabel : String
+    , marginTop : Float
+    , marginRight : Float
+    , marginBottom : Float
+    , marginLeft : Float
+    , xAxisLabelOffsetX : Float
+    , xAxisLabelOffsetY : Float
+    , yAxisLabelOffsetX : Float
+    , yAxisLabelOffsetY : Float
+    , mouseDown : Maybe data
+    , rangeX : Maybe Range
+    , rangeY : Maybe Range
+    , xZoom : Zoom
+    , yZoom : Zoom
+    , hovered : Maybe data
+    , moved : Maybe data
+    , movedSinceMouseDown : Int
+    }
+
+
+toModel : Config data -> State data -> Model data
+toModel { lines, xAcc, yAcc, pointDecoder, width, height, xIsTime, language, numberFormat, timezone, showLegends, labelFunc, xAxisLabel, yAxisLabel, marginTop, marginRight, marginBottom, marginLeft, xAxisLabelOffsetX, xAxisLabelOffsetY, yAxisLabelOffsetX, yAxisLabelOffsetY } { mouseDown, rangeX, rangeY, xZoom, yZoom, hovered, moved, movedSinceMouseDown } =
+    { lines = lines
+    , xAcc = xAcc
+    , yAcc = yAcc
+    , pointDecoder = pointDecoder
+    , width = width
+    , height = height
+    , xIsTime = xIsTime
+    , language = language
+    , numberFormat = numberFormat
+    , timezone = timezone
+    , showLegends = showLegends
+    , labelFunc = labelFunc
+    , xAxisLabel = xAxisLabel
+    , yAxisLabel = yAxisLabel
+    , marginTop = marginTop
+    , marginRight = marginRight
+    , marginBottom = marginBottom
+    , marginLeft = marginLeft
+    , xAxisLabelOffsetX = xAxisLabelOffsetX
+    , xAxisLabelOffsetY = xAxisLabelOffsetY
+    , yAxisLabelOffsetX = yAxisLabelOffsetX
+    , yAxisLabelOffsetY = yAxisLabelOffsetY
+    , mouseDown = mouseDown
+    , rangeX = rangeX
+    , rangeY = rangeY
+    , xZoom = xZoom
+    , yZoom = yZoom
+    , hovered = hovered
+    , moved = moved
+    , movedSinceMouseDown = movedSinceMouseDown
     }
 
 
@@ -985,14 +1038,7 @@ dotsConfig hovered =
 chartConfig :
     Model data
     -> LineChart.Config data (Msg data)
-chartConfig ({ state, config } as model) =
-    let
-        (State state_) =
-            state
-
-        (Config config_) =
-            config
-    in
+chartConfig model =
     { x = xAxisConfig model
     , y = yAxisConfig model
     , container = containerConfig config
