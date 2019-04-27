@@ -40,7 +40,7 @@ update msg model =
     case msg of
         MyPlotMsg plotMsg ->
             { model
-                | plotState = Plot.update myConfig plotMsg model.plotState
+                | plotState = Plot.update plotMsg model.plotState
             }
 
 
@@ -48,8 +48,8 @@ view : Model -> Html Msg
 view model =
     Plot.points myPoints
         |> Plot.drawHtml
-            model.plotState
             MyPlotMsg
+            model.plotState
 
 
 main =

@@ -6,7 +6,7 @@ module ZoomPlot exposing
     , drawHtml
     , update
     , Config
-    , custom, points
+    , custom, height, labelFunc, language, marginBottom, marginLeft, marginRight, marginTop, numberFormat, points, showLegends, timezone, width, xAxisLabel, xAxisLabelOffsetX, xAxisLabelOffsetY, xIsTime, yAxisLabel, yAxisLabelOffsetX, yAxisLabelOffsetY
     )
 
 {-|
@@ -598,6 +598,18 @@ drawHtml toMsg state config =
 
 
 ---- MUTATING CONFIG ----
+
+
+width : Float -> Config data -> Config data
+width n (Config config) =
+    Config
+        { config | width = n }
+
+
+height : Float -> Config data -> Config data
+height n (Config config) =
+    Config
+        { config | height = n }
 
 
 xIsTime : Bool -> Config data -> Config data
@@ -1313,8 +1325,8 @@ If you need routing to update multiple plots:
                 )
 
 -}
-update : Config data -> Msg data -> State data -> State data
-update config msg ((State state_) as state) =
+update : Msg data -> State data -> State data
+update msg ((State state_) as state) =
     case msg of
         MouseDown accs point ->
             case state_.mouseDown of
