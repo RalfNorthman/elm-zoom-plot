@@ -47,24 +47,24 @@ type alias Point =
     { x : Float, y : Float }
 
 
-coRecords : List Record
-coRecords =
+noRecords : List Record
+noRecords =
     let
         from : Int
         from =
-            Time.Extra.Parts 2018 Feb 5 13 0 0 0
+            Time.Extra.Parts 2018 Mar 1 13 0 0 0
                 |> Time.Extra.partsToPosix Time.utc
                 |> posixToMillis
 
         to : Int
         to =
-            Time.Extra.Parts 2018 Apr 23 2 0 0 0
+            Time.Extra.Parts 2018 Mar 15 2 0 0 0
                 |> Time.Extra.partsToPosix Time.utc
                 |> posixToMillis
     in
     Data.records
         |> List.filter
-            (\r -> r.co |> Maybe.Extra.isJust)
+            (\r -> r.no |> Maybe.Extra.isJust)
         |> List.filter
             (\r -> (posixToMillis r.date > from) && (posixToMillis r.date < to))
 
@@ -104,7 +104,7 @@ update msg model =
 
 myPointDecoder : Point -> Record
 myPointDecoder { x, y } =
-    Record (x |> round |> millisToPosix) Nothing Nothing (Just y) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing 0
+    Record (x |> round |> millisToPosix) Nothing Nothing Nothing Nothing Nothing (Just y) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing 0
 
 
 myWidth =
@@ -128,16 +128,18 @@ view model =
                         Colors.rust
                         Dots.circle
                         ""
-                        coRecords
+                        noRecords
                     ]
                 , toMsg = ToPlot
                 , xAcc = .date >> posixToMillis >> toFloat
-                , yAcc = .co >> Maybe.withDefault 0
+                , yAcc = .no >> Maybe.withDefault 0
                 , pointDecoder = myPointDecoder
                 }
                 |> Plot.width myWidth
                 |> Plot.height myHeight
                 |> Plot.xIsTime True
+                |> Plot.marginRight 50
+                |> Plot.marginTop 50
                 |> Plot.draw model.plot
             )
 
