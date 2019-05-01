@@ -47,8 +47,8 @@ type alias Point =
     { x : Float, y : Float }
 
 
-noRecords : List Record
-noRecords =
+recordsNO : List Record
+recordsNO =
     let
         from : Int
         from =
@@ -115,33 +115,41 @@ myHeight =
     800
 
 
+plotNO : Model -> Element Msg
+plotNO model =
+    el
+        [ width <| px myWidth
+        , height <| px myHeight
+        ]
+        (Plot.custom
+            { lines =
+                [ LineChart.line
+                    Colors.rust
+                    Dots.circle
+                    ""
+                    recordsNO
+                ]
+            , toMsg = ToPlot
+            , xAcc = .date >> posixToMillis >> toFloat
+            , yAcc = .no >> Maybe.withDefault 0
+            , pointDecoder = myPointDecoder
+            }
+            |> Plot.width myWidth
+            |> Plot.height myHeight
+            |> Plot.xIsTime True
+            |> Plot.marginRight 50
+            |> Plot.marginTop 50
+            |> Plot.yAxisLabel "NO [μg/m³]"
+            |> Plot.yAxisLabelOffsetX 30
+            |> Plot.yAxisLabelOffsetY 20
+            |> Plot.draw model.plot
+        )
+
+
 view : Model -> Html Msg
 view model =
     layout [ padding 20 ] <|
-        el
-            [ width <| px myWidth
-            , height <| px myHeight
-            ]
-            (Plot.custom
-                { lines =
-                    [ LineChart.line
-                        Colors.rust
-                        Dots.circle
-                        ""
-                        noRecords
-                    ]
-                , toMsg = ToPlot
-                , xAcc = .date >> posixToMillis >> toFloat
-                , yAcc = .no >> Maybe.withDefault 0
-                , pointDecoder = myPointDecoder
-                }
-                |> Plot.width myWidth
-                |> Plot.height myHeight
-                |> Plot.xIsTime True
-                |> Plot.marginRight 50
-                |> Plot.marginTop 50
-                |> Plot.draw model.plot
-            )
+        plotNO model
 
 
 main : Program () Model Msg
