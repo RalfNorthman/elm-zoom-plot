@@ -16,8 +16,10 @@ import LineChart
 import LineChart.Colors as Colors
 import LineChart.Coordinate
 import LineChart.Dots as Dots
+import Maybe.Extra
 import Task exposing (Task)
-import Time exposing (Posix)
+import Time exposing (Month(..), Posix, millisToPosix, posixToMillis)
+import Time.Extra
 import ZoomPlot as Plot
 
 
@@ -41,31 +43,102 @@ type alias Record =
     }
 
 
+type alias Point =
+    { x : Float, y : Float }
+
+
+coRecords : List Record
+coRecords =
+    let
+        from : Int
+        from =
+            Time.Extra.Parts 2018 Feb 5 13 0 0 0
+                |> Time.Extra.partsToPosix Time.utc
+                |> posixToMillis
+
+        to : Int
+        to =
+            Time.Extra.Parts 2018 Apr 23 2 0 0 0
+                |> Time.Extra.partsToPosix Time.utc
+                |> posixToMillis
+    in
+    Data.records
+        |> List.filter
+            (\r -> r.co |> Maybe.Extra.isJust)
+        |> List.filter
+            (\r -> (posixToMillis r.date > from) && (posixToMillis r.date < to))
+
+
+
+---- MODEL ----
+
+
+type alias Model =
+    { plot : Plot.State Record
+    }
+
+
+init : ( Model, Cmd msg )
+init =
+    ( { plot = Plot.init }, Cmd.none )
+
+
+
+---- UPDATE ----
+
+
+type Msg
+    = ToPlot (Plot.Msg Record)
+
+
+update : Msg -> Model -> ( Model, Cmd msg )
+update msg model =
+    case msg of
+        ToPlot plotMsg ->
+            ( { model | plot = Plot.update plotMsg model.plot }, Cmd.none )
+
+
 
 ---- PROGRAM ----
 
 
+myPointDecoder : Point -> Record
 myPointDecoder { x, y } =
-    Record x y Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing 0
+    Record (x |> round |> millisToPosix) Nothing Nothing (Just y) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing 0
+
+
+myWidth =
+    1500
+
+
+myHeight =
+    800
 
 
 view : Model -> Html Msg
 view model =
     layout [ padding 20 ] <|
         el
-            [ width <| px 800
-            , height <| px 600
+            [ width <| px myWidth
+            , height <| px myHeight
             ]
             (Plot.custom
-                { lines = [ LineChart.line Colors.rust Dots.circle "" Data.records ]
+                { lines =
+                    [ LineChart.line
+                        Colors.rust
+                        Dots.circle
+                        ""
+                        coRecords
+                    ]
                 , toMsg = ToPlot
-                , xAcc = .time >> .posixToMillis >> toFloat
-                , yAcc = .ben
-                , pointDecoder = myPoints
+                , xAcc = .date >> posixToMillis >> toFloat
+                , yAcc = .co >> Maybe.withDefault 0
+                , pointDecoder = myPointDecoder
                 }
-                |> Plot.width 1920
-                |> Plot.height 400
-                |> Plot.draw model.plotState
+                |> Plot.width myWidth
+                |> Plot.height myHeight
+                |> Plot.xIsTime True
+                |> Plot.draw model.plot
             )
 
 
@@ -75,5 +148,5 @@ main =
         { view = view
         , init = \_ -> init
         , update = update
-        , subscriptions = subscriptions
+        , subscriptions = \_ -> Sub.none
         }
