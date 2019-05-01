@@ -2,6 +2,7 @@ module Data exposing (Record, records)
 
 import Time exposing (Posix)
 
+
 type alias Record =
     { date : Posix
     , ben : Maybe Float
