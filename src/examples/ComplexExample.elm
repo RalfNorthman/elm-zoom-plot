@@ -160,7 +160,7 @@ myWidth =
 
 
 myHeight =
-    400
+    350
 
 
 plotNO : Model -> Element Msg
@@ -263,6 +263,29 @@ view model =
                 ]
               <|
                 plotSO2 model
+            , let
+                label =
+                    paragraph [ Font.center, padding 50 ]
+                        [ el [ googleFont "Playfair Display" ] <| text "Ralf Northman "
+                        , el
+                            [ googleFont "Nixie One"
+                            , Font.size 35
+                            ]
+                          <|
+                            text "|"
+                        , el
+                            [ googleFont "Gruppo"
+                            , Font.size 25
+                            ]
+                          <|
+                            text " elm-zoom-plot"
+                        ]
+              in
+              link [ centerX ]
+                { url =
+                    "https://package.elm-lang.org/packages/RalfNorthman/elm-zoom-plot/latest"
+                , label = label
+                }
             ]
 
 
