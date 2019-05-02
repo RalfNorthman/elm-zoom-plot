@@ -236,13 +236,18 @@ view model =
             , width fill
             , centerX
             ]
-            [ el
-                [ centerX
-                , googleFont "Playfair Display"
-                , Font.size 24
-                ]
-              <|
-                text "Madrid Air Quality"
+            [ newTabLink [ centerX ]
+                { url =
+                    "https://www.kaggle.com/decide-soluciones/air-quality-madrid"
+                , label =
+                    el
+                        [ centerX
+                        , googleFont "Playfair Display"
+                        , Font.size 24
+                        ]
+                    <|
+                        text "Madrid Air Quality"
+                }
             , el
                 [ centerX
                 , googleFont "Gruppo"
@@ -263,8 +268,10 @@ view model =
                 ]
               <|
                 plotSO2 model
-            , let
-                label =
+            , link [ centerX ]
+                { url =
+                    "https://package.elm-lang.org/packages/RalfNorthman/elm-zoom-plot/latest"
+                , label =
                     paragraph [ Font.center, padding 50 ]
                         [ el [ googleFont "Playfair Display" ] <| text "Ralf Northman "
                         , el
@@ -280,11 +287,6 @@ view model =
                           <|
                             text " elm-zoom-plot"
                         ]
-              in
-              link [ centerX ]
-                { url =
-                    "https://package.elm-lang.org/packages/RalfNorthman/elm-zoom-plot/latest"
-                , label = label
                 }
             ]
 
