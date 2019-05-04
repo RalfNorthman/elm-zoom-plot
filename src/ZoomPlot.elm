@@ -2,19 +2,33 @@ module ZoomPlot exposing
     ( State
     , init
     , Msg
+    , update
+    , points
     , draw
     , drawHtml
-    , update
+    , width
+    , height
+    , xAxisLabel
+    , yAxisLabel
+    , showLegends
+    , numberFormat
+    , xIsTime
+    , timezone
+    , language
+    , labelFunc
+    , marginLeft
+    , marginRight
+    , marginTop
+    , marginBottom
+    , xAxisLabelOffsetX
+    , xAxisLabelOffsetY
+    , yAxisLabelOffsetX
+    , yAxisLabelOffsetY
+    , custom
     , Config
-    , custom, height, labelFunc, language, marginBottom, marginLeft, marginRight, marginTop, numberFormat, points, showLegends, timezone, width, xAxisLabel, xAxisLabelOffsetX, xAxisLabelOffsetY, xIsTime, yAxisLabel, yAxisLabelOffsetX, yAxisLabelOffsetY
     )
 
 {-|
-
-
-# Minimal configuration
-
-@docs easyConfig
 
 
 # Storing the plot state in your model
@@ -28,36 +42,76 @@ module ZoomPlot exposing
 @docs Msg
 
 
-# Drawing your linechart
-
-@docs draw
-@docs drawHtml
-
-
 # Updating your plot state
 
 @docs update
 
 
+# Drawing your linechart
+
+@docs points
+@docs draw
+@docs drawHtml
+
+
 # Customizing your plot
 
-Let's say that you want to customize your configuration to show legends for your different lines and also extend the right margin so that the legends don't get cut off. You can do it like this:
+Let's say that you want to customize your configuration to show legends for your different lines and also extend the right margin so that the legends don't get cut off.
 
-    myConfig =
-        let
-            default =
-                Plot.easyConfig points
-        in
-        { default
-            | showLegends = True
-            , marginRight = 70
+Then you'll have to pipe in suitable customizers before your `draw` like this:
+
+    Plot.points
+        { toMsg = ToPlot
+        , data = myPoints
         }
+        |> Plot.showLegends True
+        |> Plot.marginRight 70
+        |> Plot.drawHtml model.plotState
+
+
+# Customizers:
+
+@docs width
+@docs height
+@docs xAxisLabel
+@docs yAxisLabel
+@docs showLegends
+@docs numberFormat
+@docs xIsTime
+@docs timezone
+@docs language
+@docs labelFunc
+
+
+## Margin customizers
+
+Size in pixels of the different margins around the actual plot. This is real estate that may or may not be needed by tick labels, legends and axis labels.
+
+@docs marginLeft
+@docs marginRight
+@docs marginTop
+@docs marginBottom
+
+
+## Axis label offset customizers
+
+Amount in pixels for moving around the axis labels.
+
+Positive y adjusts upwards contrary to Svg standard.
+
+@docs xAxisLabelOffsetX
+@docs xAxisLabelOffsetY
+@docs yAxisLabelOffsetX
+@docs yAxisLabelOffsetY
+
+
+# Plotting custom types
 
 What if your data isn't in the form of `{ x : Float, y : Float}`?
 
 Then you will need:
 
-@docs defaultConfigWith
+@docs custom
 
 If you want to start customizing every aspect of your plot you need to know about all the fields of the `Plot.Config` type:
 
@@ -251,6 +305,8 @@ defaultFormat number =
 
 It can be as simple as:
 
+    import ZoomPlot as Plot
+
     type alias Model =
         { plotState : Plot.State Point }
 
@@ -310,17 +366,16 @@ type alias Accessors data =
 
     type Msg
         = MyPlotMsg (Plot.Msg Point)
-        | MsgNotConcerningPlots
+        | NoOp
 
 or if you need routing for several plots:
 
-    type PlotNr
+    type MyPlot
         = Plot1
         | Plot2
-        | Plot3
 
     type Msg
-        = ToPlot PlotNr (Plot.Msg ExampleType)
+        = ToPlot MyPlot (Plot.Msg Point)
 
 -}
 type Msg data
@@ -366,14 +421,17 @@ type Config data msg
     type alias Point =
         { x : Float, y : Float }
 
-    points =
+    myPoints =
         [ Point 11 120
         , Point 12 121
         , Point 13 120.5
         ]
 
-    myConfig =
-        Plot.easyConfig points
+    Plot.points
+        { toMsg = ToPlot
+        , data = myPoints
+        }
+        |> Plot.drawHtml model.plotState
 
 -}
 points :
@@ -556,25 +614,17 @@ toModel config_ state_ =
 
 {-| Use this function to place your linechart within your view.
 
-    import Element as E
+    import Element
 
     view model =
-        E.layout [ E.padding 20 ] <|
-            E.el
-                [ E.width <| px 800
-                , E.height <| px 600
-                ]
-            <|
-                Plot.draw
-                    800
-                    600
-                    myConfig
-                    model.plotState
-                    MyPlotMsg
-
-The first two arguments are width and height, which mostly determines the aspect ratio of your plot since it fills the container you place it in.
-
-Small dimension values in large containers can make the text in the plot unreasonably large.
+        Element.layout
+            [ Element.padding 20 ]
+            (Plot.points
+                { toMsg = ToPlot
+                , data = myPoints
+                }
+                |> Plot.draw model.plotState
+            )
 
 -}
 draw :
@@ -611,112 +661,198 @@ drawHtml state config =
 ---- MUTATING CONFIG ----
 
 
+{-| Set the plot width in pixels.
+-}
 width : Float -> Config data msg -> Config data msg
 width n (Config config) =
     Config
         { config | width = n }
 
 
+{-| Set the plot height in pixels.
+-}
 height : Float -> Config data msg -> Config data msg
 height n (Config config) =
     Config
         { config | height = n }
 
 
+{-| Set whether the x-axis should display its values as time or not.
+
+Default is `False`.
+
+-}
 xIsTime : Bool -> Config data msg -> Config data msg
 xIsTime bool (Config config) =
     Config
         { config | xIsTime = bool }
 
 
+{-| Set what language dates on the time axis will be in.
+
+Only matters when `Plot.xIsTime True`.
+
+        import DateFormat.Language
+
+        myPlotConfig
+        |> Plot.language DateFormat.Language.swedish
+        |> Plot.draw model.myPlot
+
+Default is `DateFormat.Language.english`.
+
+-}
 language : Language -> Config data msg -> Config data msg
 language lang (Config config) =
     Config
         { config | language = lang }
 
 
+{-| Set the function which turns floats to strings for the axis labels (on non-time axes).
+
+        import FormatNumber
+        import FormatNumber.Locales
+
+        myPlotConfig
+        |> Plot.numberFormat
+            (\float ->
+              FormatNumber.format
+                FormatNumber.Locales.frenchLocale
+                float
+            )
+        |> Plot.draw model.myPlot
+
+Default is:
+
+        defaultFormat : Float -> String
+        defaultFormat number =
+            FormatNumber.format
+                FormatNumber.Locales.usLocale
+                number
+
+-}
 numberFormat : (Float -> String) -> Config data msg -> Config data msg
 numberFormat formatter (Config config) =
     Config
         { config | numberFormat = formatter }
 
 
+{-| Set which timezone your `Time.Posix` values should be converted into for your time axis tick labels.
+
+Only matters when `Plot.xIsTime True`.
+
+default is `Time.utc`.
+
+-}
 timezone : Time.Zone -> Config data msg -> Config data msg
 timezone tz (Config config) =
     Config
         { config | timezone = tz }
 
 
+{-| Set whether legends for your plot lines should be drawn or not. If you turn this on you most likely also need to adjust `marginRight` for them to not get cut off.
+
+Default is `False`.
+
+-}
 showLegends : Bool -> Config data msg -> Config data msg
 showLegends bool (Config config) =
     Config
         { config | showLegends = bool }
 
 
+{-| Set extra hover label row. Hoverlabels for the x and y coordinates are always on, but if you want to add something extra on a row above them you use this.
+
+You can for example just use a string field from your data type:
+
+        myPlotConfig
+        |> Plot.labelFunc .rocketInventorName
+        |> Plot.draw model.myPlot
+
+Default is `\_ -> ""`
+
+-}
 labelFunc : (data -> String) -> Config data msg -> Config data msg
 labelFunc func (Config config) =
     Config
         { config | labelFunc = func }
 
 
+{-| Set a string for labeling of the x-axis. Adjustment of margins and label offsets could be required to get the desired result.
+
+Default is `""`
+
+-}
 xAxisLabel : String -> Config data msg -> Config data msg
 xAxisLabel label (Config config) =
     Config
         { config | xAxisLabel = label }
 
 
+{-| Set a string for labeling of the y-axis. Adjustment of margins and label offsets could be required to get the desired result.
+
+Default is `""`
+
+-}
 yAxisLabel : String -> Config data msg -> Config data msg
 yAxisLabel label (Config config) =
     Config
         { config | yAxisLabel = label }
 
 
+{-| -}
 marginTop : Float -> Config data msg -> Config data msg
 marginTop margin (Config config) =
     Config
         { config | marginTop = margin }
 
 
+{-| -}
 marginRight : Float -> Config data msg -> Config data msg
 marginRight margin (Config config) =
     Config
         { config | marginRight = margin }
 
 
+{-| -}
 marginBottom : Float -> Config data msg -> Config data msg
 marginBottom margin (Config config) =
     Config
         { config | marginBottom = margin }
 
 
+{-| -}
 marginLeft : Float -> Config data msg -> Config data msg
 marginLeft margin (Config config) =
     Config
         { config | marginLeft = margin }
 
 
+{-| -}
 xAxisLabelOffsetX : Float -> Config data msg -> Config data msg
 xAxisLabelOffsetX offset (Config config) =
     Config
         { config | xAxisLabelOffsetX = offset }
 
 
+{-| -}
 xAxisLabelOffsetY : Float -> Config data msg -> Config data msg
 xAxisLabelOffsetY offset (Config config) =
     Config
-        { config | xAxisLabelOffsetY = offset }
+        { config | xAxisLabelOffsetY = -offset }
 
 
+{-| -}
 yAxisLabelOffsetX : Float -> Config data msg -> Config data msg
 yAxisLabelOffsetX offset (Config config) =
     Config
         { config | yAxisLabelOffsetX = offset }
 
 
+{-| -}
 yAxisLabelOffsetY : Float -> Config data msg -> Config data msg
 yAxisLabelOffsetY offset (Config config) =
     Config
-        { config | yAxisLabelOffsetY = offset }
+        { config | yAxisLabelOffsetY = -offset }
 
 
 
@@ -1299,41 +1435,32 @@ zoomUpdate accs ((State state_) as state) point =
     update : Msg -> Model -> Model
     update msg model =
         case msg of
-            MyPlotMsg plotMsg ->
+            ToPlot plotMsg ->
                 { model
                     | plotState =
                         Plot.update
-                            myConfig
                             plotMsg
                             model.plotState
                 }
 
 If you need routing to update multiple plots:
 
-    update : Msg -> Model -> ( Model, Cmd Msg )
-    update msg model =
-        case msg of
-            ToPlot Plot1 plotMsg ->
-                ( { model
-                    | plot1 =
-                        Plot.update
-                            plotConfig1
-                            plotMsg
-                            model.plot1
-                  }
-                , Cmd.none
-                )
+    case msg of
+        ToPlot Plot1 plotMsg ->
+            { model
+                | plot1 =
+                    Plot.update
+                        plotMsg
+                        model.plot1
+            }
 
-            ToPlot Plot2 plotMsg ->
-                ( { model
-                    | plot2 =
-                        Plot.update
-                            plotConfig2
-                            plotMsg
-                            model.plot2
-                  }
-                , Cmd.none
-                )
+        ToPlot Plot2 plotMsg ->
+            { model
+                | plot2 =
+                    Plot.update
+                        plotMsg
+                        model.plot2
+            }
 
 -}
 update : Msg data -> State data -> State data
