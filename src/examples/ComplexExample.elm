@@ -145,6 +145,26 @@ googleFont fontName =
         ]
 
 
+displaySerif : Attribute Msg
+displaySerif =
+    googleFont "Playfair Display"
+
+
+thinSans : Attribute Msg
+thinSans =
+    googleFont "Gruppo"
+
+
+plotSans : Attribute Msg
+plotSans =
+    googleFont "Montserrat"
+
+
+separator : Attribute Msg
+separator =
+    googleFont "Nixie One"
+
+
 pointDecoderNO : Point -> Record
 pointDecoderNO { x, y } =
     Record (x |> round |> millisToPosix) Nothing Nothing Nothing Nothing Nothing (Just y) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing 0
@@ -161,6 +181,36 @@ myWidth =
 
 myHeight =
     350
+
+
+titleKaggleLink : Element Msg
+titleKaggleLink =
+    column
+        [ spacing 2
+        , width fill
+        , centerX
+        ]
+        [ newTabLink [ centerX ]
+            { url =
+                "https://www.kaggle.com/decide-soluciones/air-quality-madrid"
+            , label =
+                el
+                    [ centerX
+                    , displaySerif
+                    , Font.size 24
+                    ]
+                <|
+                    text "Madrid Air Quality"
+            }
+        , el
+            [ centerX
+            , thinSans
+            , Font.size 27
+            , Font.wordSpacing -2
+            ]
+          <|
+            text "Plaza de España"
+        ]
 
 
 plotNO : Model -> Element Msg
@@ -185,8 +235,8 @@ plotNO model =
             |> Plot.width myWidth
             |> Plot.height myHeight
             |> Plot.xIsTime True
-            |> Plot.marginRight 50
-            |> Plot.marginTop 50
+            |> Plot.marginLeft 60
+            |> Plot.marginRight 60
             |> Plot.yAxisLabel "NO [μg/m³]"
             |> Plot.yAxisLabelOffsetX 30
             |> Plot.yAxisLabelOffsetY 20
@@ -216,13 +266,39 @@ plotSO2 model =
             |> Plot.width myWidth
             |> Plot.height myHeight
             |> Plot.xIsTime True
-            |> Plot.marginRight 50
+            |> Plot.marginLeft 60
+            |> Plot.marginRight 60
             |> Plot.marginTop 50
             |> Plot.yAxisLabel "SO₂ [μg/m³]"
-            |> Plot.yAxisLabelOffsetX 30
+            |> Plot.yAxisLabelOffsetX 35
             |> Plot.yAxisLabelOffsetY 20
             |> Plot.draw model.plotSO2
         )
+
+
+signatureDocumentationLink : Element Msg
+signatureDocumentationLink =
+    link [ centerX ]
+        { url =
+            "https://package.elm-lang.org/packages/RalfNorthman/elm-zoom-plot/latest"
+        , label =
+            paragraph [ Font.center, padding 50 ]
+                [ el [ displaySerif ] <|
+                    text "Ralf Northman "
+                , el
+                    [ separator
+                    , Font.size 35
+                    ]
+                  <|
+                    text "|"
+                , el
+                    [ thinSans
+                    , Font.size 25
+                    ]
+                  <|
+                    text " elm-zoom-plot"
+                ]
+        }
 
 
 view : Model -> Html Msg
@@ -234,60 +310,11 @@ view model =
         column
             [ spacing 2
             , width fill
-            , centerX
             ]
-            [ newTabLink [ centerX ]
-                { url =
-                    "https://www.kaggle.com/decide-soluciones/air-quality-madrid"
-                , label =
-                    el
-                        [ centerX
-                        , googleFont "Playfair Display"
-                        , Font.size 24
-                        ]
-                    <|
-                        text "Madrid Air Quality"
-                }
-            , el
-                [ centerX
-                , googleFont "Gruppo"
-                , Font.size 27
-                , Font.wordSpacing -2
-                ]
-              <|
-                text "Plaza de España"
-            , el
-                [ googleFont "Montserrat"
-                , centerX
-                ]
-              <|
-                plotNO model
-            , el
-                [ googleFont "Montserrat"
-                , centerX
-                ]
-              <|
-                plotSO2 model
-            , link [ centerX ]
-                { url =
-                    "https://package.elm-lang.org/packages/RalfNorthman/elm-zoom-plot/latest"
-                , label =
-                    paragraph [ Font.center, padding 50 ]
-                        [ el [ googleFont "Playfair Display" ] <| text "Ralf Northman "
-                        , el
-                            [ googleFont "Nixie One"
-                            , Font.size 35
-                            ]
-                          <|
-                            text "|"
-                        , el
-                            [ googleFont "Gruppo"
-                            , Font.size 25
-                            ]
-                          <|
-                            text " elm-zoom-plot"
-                        ]
-                }
+            [ titleKaggleLink
+            , el [ plotSans, centerX ] <| plotNO model
+            , el [ plotSans, centerX ] <| plotSO2 model
+            , signatureDocumentationLink
             ]
 
 
