@@ -47,7 +47,7 @@ module ZoomPlot exposing
 @docs update
 
 
-# Drawing your linechart
+# Drawing your line chart
 
 @docs points
 @docs draw
@@ -56,7 +56,7 @@ module ZoomPlot exposing
 
 # Customizing your plot
 
-Customization is done by mutatating the `Config` put out by `Plot.points` and `Plot.custom` before it is put into `draw`.
+Customization is done by mutating the `Config` output from `Plot.points` and `Plot.custom` before it is inserted into `draw`.
 
 @docs Config
 
@@ -509,7 +509,7 @@ toModel config_ state_ =
     }
 
 
-{-| Use this function to place your linechart within your view.
+{-| Use this function to place your line chart within your view.
 
     import Element
 
