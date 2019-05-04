@@ -165,16 +165,6 @@ separator =
     googleFont "Nixie One"
 
 
-pointDecoderNO : Point -> Record
-pointDecoderNO { x, y } =
-    Record (x |> round |> millisToPosix) Nothing Nothing Nothing Nothing Nothing (Just y) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing 0
-
-
-pointDecoderSO2 : Point -> Record
-pointDecoderSO2 { x, y } =
-    Record (x |> round |> millisToPosix) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just y) Nothing Nothing 0
-
-
 myPlotWidth =
     800
 
@@ -232,8 +222,13 @@ plotNO model =
         |> Plot.marginRight 40
         |> Plot.yAxisLabel "NO [μg/m³]"
         |> Plot.yAxisLabelOffsetX 30
-        |> Plot.yAxisLabelOffsetY 20
+        |> Plot.yAxisLabelOffsetY -15
         |> Plot.draw model.plotNO
+
+
+pointDecoderNO : Point -> Record
+pointDecoderNO { x, y } =
+    Record (x |> round |> millisToPosix) Nothing Nothing Nothing Nothing Nothing (Just y) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing 0
 
 
 plotSO2 : Model -> Element Msg
@@ -259,8 +254,13 @@ plotSO2 model =
         |> Plot.marginTop 50
         |> Plot.yAxisLabel "SO₂ [μg/m³]"
         |> Plot.yAxisLabelOffsetX 35
-        |> Plot.yAxisLabelOffsetY 20
+        |> Plot.yAxisLabelOffsetY -20
         |> Plot.draw model.plotSO2
+
+
+pointDecoderSO2 : Point -> Record
+pointDecoderSO2 { x, y } =
+    Record (x |> round |> millisToPosix) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just y) Nothing Nothing 0
 
 
 signatureDocumentationLink : Element Msg

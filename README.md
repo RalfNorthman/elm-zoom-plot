@@ -1,10 +1,9 @@
-# Plot zoomable linecharts with Elm
+# Zoomable Line Charts
 
 The main objective of this package is to draw linecharts which have:
 * mouse drag zoom
 * reasonable time axes
 
-## Minimal example:
 
 ```elm
 import ZoomPlot as Plot
@@ -40,7 +39,10 @@ update msg model =
     case msg of
         ToPlot plotMsg ->
             { model
-                | plotState = Plot.update plotMsg model.plotState
+                | plotState =
+                    Plot.update
+                        plotMsg
+                        model.plotState
             }
 
 

@@ -40,7 +40,10 @@ update msg model =
     case msg of
         ToPlot plotMsg ->
             { model
-                | plotState = Plot.update plotMsg model.plotState
+                | plotState =
+                    Plot.update
+                        plotMsg
+                        model.plotState
             }
 
 

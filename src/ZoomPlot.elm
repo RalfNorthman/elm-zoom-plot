@@ -6,6 +6,7 @@ module ZoomPlot exposing
     , points
     , draw
     , drawHtml
+    , Config
     , width
     , height
     , xAxisLabel
@@ -25,7 +26,6 @@ module ZoomPlot exposing
     , yAxisLabelOffsetX
     , yAxisLabelOffsetY
     , custom
-    , Config
     )
 
 {-|
@@ -55,6 +55,10 @@ module ZoomPlot exposing
 
 
 # Customizing your plot
+
+Customization is done by mutatating the `Config` put out by `Plot.points` and `Plot.custom` before it is put into `draw`.
+
+@docs Config
 
 Let's say that you want to customize your configuration to show legends for your different lines and also extend the right margin so that the legends don't get cut off.
 
@@ -113,146 +117,12 @@ Then you will need:
 
 @docs custom
 
-If you want to start customizing every aspect of your plot you need to know about all the fields of the `Plot.Config` type:
 
-@docs Config
+## _Note:_
 
-So, what does all this mean?
+This package uses the fork [peterszerzo/line-charts](https://package.elm-lang.org/packages/peterszerzo/line-charts/latest) since it contains necessary updates to terezka's great original package.
 
-  - **lines** :
-    A list where you set how the different "lines" on your chart should look: color, point shape and legend name. Most importantly it is also here you supply your data to the configuration.
-
-        import LineChart
-        import LineChart.Colors as Colors
-        import LineChart.Dots as Dots
-
-        [ LineChart.line
-            Colors.tealLight
-            Dots.circle
-            "cos"
-            myCosData
-        , LineChart.line
-            Colors.goldLight
-            Dots.diamond
-            "polysin"
-            myPolySinData
-        ]
-
-    _Note:_ This package uses the fork [peterszerzo/line-charts](https://package.elm-lang.org/packages/peterszerzo/line-charts/latest) since it contains necessary updates to terezka's great original package. I advise you to do the same, otherwise namespace collisions seem inevitable.
-
-  - **xAcc** :
-    Accessor function (getter) from your data type to the float value used for x coordinates. If you want a time axis (don't forget to set `xIsTime` to `True`) for your `Time.Posix` values you can do something like this:
-
-        .time >> Time.posixToMillis >> toFloat
-
-  - **yAcc** :
-    Accessor function (getter) from your data type to the float value used for y coordinates.
-
-        .rocketThrust
-
-  - **pointDecoder** :
-    The internals of the package needs a way to convert Point back to your type. You basically have to write a function that puts the coordinates of a `Point` into an "empty" instance of your type.
-
-        \{ x, y } -> RocketData 0 0 "" x 0 "" 0 y Nothing
-
-  - **xIsTime** :
-    Whether the x-axis should display its values as time or not.
-
-        True
-
-  - **language** :
-    What language dates on time axes will be in.
-
-        import DateFormat.Language
-
-        DateFormat.Language.swedish
-
-  - **numberFormat** :
-    The function which turns floats to strings for the axis labels (on non-time axes).
-
-        import FormatNumber
-        import FormatNumber.Locales
-
-        \float ->
-            FormatNumber.format
-                FormatNumber.Locales.frenchLocale
-                float
-
-  - **timeZone** :
-    Which timezone your `Time.Posix` values should be converted into for your time axis.
-
-        import Time
-
-        Time.utc -- This is the default.
-
-  - **showLegends** :
-    Whether legends for your plot lines should be drawn. If you turn this on you most likely also need to adjust `marginRight` for them to not get cut off.
-
-        True
-
-  - **labelFunc** :
-    Hoverlabels for the x and y coordinates are always on, but if you want to add something extra on a row above them you use this field. One of the more straightforward ways to use this is to just use a string field from your data type:
-
-        .rocketInventorName
-
-    or something more involved:
-
-        \d -> d.firstName ++ " " ++ d.lastName
-
-  - **xAxisLabel** / **yAxisLabel** :
-    Strings for labeling the axes. Adjustment of margins and label offsets could be required to get the desired result.
-
-        "Rocket velocity [km/s]"
-
-  - **marginTop** / **marginRight** / **marginBottom** / **marginLeft** :
-    Size in pixels of the different margins around the actual plot. This is real estate that may or may not be needed by tick labels, legends and axis labels.
-
-        60
-
-  - **xAxisLabelOffsetX** / **xAxisLabelOffsetY** / **yAxisLabelOffsetX** / **yAxisLabelOffsetY** :
-    Distance in pixels of how much you want to adjust the positioning of the axis title labels.
-
-        20
-
-
-# Configuration defaults
-
-It can be useful to know what the defaults are:
-
-        { lines = [ LineChart.line
-                        Colors.tealLight
-                        Dots.circle
-                        ""
-                        inputPoints
-                  ]
-        , xAcc = .x
-        , yAcc = .y
-        , pointDecoder = \p -> p
-        , xIsTime = False
-        , language = english
-        , numberFormat = defaultFormat
-        , timezone = Time.utc
-        , showLegends = False
-        , labelFunc = \_ -> ""
-        , xAxisLabel = ""
-        , yAxisLabel = ""
-        , marginTop = 20
-        , marginRight = 30
-        , marginBottom = 30
-        , marginLeft = 60
-        , xAxisLabelOffsetX = 0
-        , xAxisLabelOffsetY = 0
-        , yAxisLabelOffsetX = 0
-        , yAxisLabelOffsetY = 0
-        }
-
-        defaultFormat : Float -> String
-        defaultFormat number =
-            FormatNumber.format
-                FormatNumber.Locales.usLocale
-                number
-
-Above are the defaults from `easyConfig`, where `inputPoints` comes from the user. The defaults for `defaultConfigWith` are the same except the fields `xAcc`, `yAcc` and `pointDecoder` which are user-provided as well.
+I advise you to do the same (at least in projects using elm-zoom-plot).
 
 -}
 
@@ -470,34 +340,61 @@ points { toMsg, data } =
 
 {-| Let's say that your data is a list of this type:
 
+    import Time
+
     type alias ExampleType =
-        { time : Posix
-        , value : Float
-        , text : String
-        , otherValue : Float
+        { time : Time.Posix
+        , thrust : Float
+        , altitude : Float
+        , latestBufferLine : String
+        , errorLog : Maybe String
         }
 
-If you want to plot data like this you can't use `easyConfig`, because it only works with data of type `Point`.
-Instead you will have to use `defaultConfigWith` to create your starting point configuration.
+If you want to plot data like this you can't use `Plot.points`, because it only works with data of type `List Point`.
 
-You need to supply it with two accessor functions (getters), one for each chart coordinate (x and y).
+Instead you can use `Plot.custom` like this:
 
-    myDefaultConfig : Plot.Config ExampleType
-    myDefaultConfig =
-        Plot.defaultConfigWith
-            listOfExampleTypes
-            (.time >> Time.posixToMillis >> toFloat)
-            .value
-            myPointDecoder
+    import LineChart
+    import LineChart.Dots as Dots
+    import LineChart.Colors as Colors
 
-It also needs a _point decoder_. The internals of the package needs a way to convert Point back to your type. You basically have to write a function that puts the coordinates of a `Point` into an "empty" instance of your type:
+    Plot.custom
+        { lines =
+            [ LineChart.line
+                Colors.blue
+                Dots.circle
+                "rocket 1"
+                listOfExampleType1
+            , LineChart.line
+                Colors.purple
+                Dots.square
+                "rocket 2"
+                listOfExampleType2
 
+            ]
+        , toMsg = ToPlot
+        , xAcc = .time >> posixToMillis >> toFloat
+        , yAcc = .thrust
+        , pointDecoder = myPointDecoder
+        }
+
+The inputs `xAcc` and `yAcc` are whatever functions that will turn your type into floats to be plotted on the line chart.
+
+Most often they are just getters plus whatever functions are needed to convert their values into floats.
+
+You may also have noticed the `myPointDecoder` above.
+
+The internals of the package needs a way to convert Point back to your type.
+
+You basically have to write a function that puts the coordinates of a `Point` into an "empty" instance of your type:
+
+    myPointDecoder : Point -> ExampleType
     myPointDecoder { x, y } =
         let
-            decodedX =
-                x |> floor |> Time.millisToPosix
+            xTime =
+                x |> round |> millisToPosix
         in
-        ExampleType decodedX y "" 0
+        ExampleType xTime y 0 "" Nothing
 
 -}
 custom :
@@ -799,56 +696,64 @@ yAxisLabel label (Config config) =
         { config | yAxisLabel = label }
 
 
-{-| -}
+{-| Default is `20`
+-}
 marginTop : Float -> Config data msg -> Config data msg
 marginTop margin (Config config) =
     Config
         { config | marginTop = margin }
 
 
-{-| -}
+{-| Default is `30`
+-}
 marginRight : Float -> Config data msg -> Config data msg
 marginRight margin (Config config) =
     Config
         { config | marginRight = margin }
 
 
-{-| -}
+{-| Default is `30`
+-}
 marginBottom : Float -> Config data msg -> Config data msg
 marginBottom margin (Config config) =
     Config
         { config | marginBottom = margin }
 
 
-{-| -}
+{-| Default is `60`
+-}
 marginLeft : Float -> Config data msg -> Config data msg
 marginLeft margin (Config config) =
     Config
         { config | marginLeft = margin }
 
 
-{-| -}
+{-| Default is `0`
+-}
 xAxisLabelOffsetX : Float -> Config data msg -> Config data msg
 xAxisLabelOffsetX offset (Config config) =
     Config
         { config | xAxisLabelOffsetX = offset }
 
 
-{-| -}
+{-| Default is `0`
+-}
 xAxisLabelOffsetY : Float -> Config data msg -> Config data msg
 xAxisLabelOffsetY offset (Config config) =
     Config
         { config | xAxisLabelOffsetY = -offset }
 
 
-{-| -}
+{-| Default is `0`
+-}
 yAxisLabelOffsetX : Float -> Config data msg -> Config data msg
 yAxisLabelOffsetX offset (Config config) =
     Config
         { config | yAxisLabelOffsetX = offset }
 
 
-{-| -}
+{-| Default is `0`
+-}
 yAxisLabelOffsetY : Float -> Config data msg -> Config data msg
 yAxisLabelOffsetY offset (Config config) =
     Config
