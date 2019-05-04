@@ -50,8 +50,6 @@ view model =
         { toMsg = ToPlot
         , data = myPoints
         }
-        |> Plot.width 1920
-        |> Plot.height 400
         |> Plot.drawHtml model.plotState
 
 

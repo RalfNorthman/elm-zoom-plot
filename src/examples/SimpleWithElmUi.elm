@@ -47,19 +47,13 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    E.layout [ E.padding 20 ] <|
-        E.el
-            [ E.width <| E.px 800
-            , E.height <| E.px 600
-            ]
-            (Plot.points
-                { toMsg = ToPlot
-                , data = myPoints
-                }
-                |> Plot.width 1920
-                |> Plot.height 400
-                |> Plot.draw model.plotState
-            )
+    E.layout [ E.padding 20 ]
+        (Plot.points
+            { toMsg = ToPlot
+            , data = myPoints
+            }
+            |> Plot.draw model.plotState
+        )
 
 
 main =
