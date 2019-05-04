@@ -581,11 +581,15 @@ draw :
     State data
     -> Config data msg
     -> Element msg
-draw state ((Config { toMsg }) as config) =
-    Element.map toMsg
+draw state config =
+    let
+        (Config conf) =
+            config
+    in
+    Element.map conf.toMsg
         (Element.el
-            [ Element.width Element.fill
-            , Element.height Element.fill
+            [ Element.width <| Element.px <| round conf.width
+            , Element.height <| Element.px <| round conf.height
             ]
          <|
             Element.html

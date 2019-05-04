@@ -175,130 +175,122 @@ pointDecoderSO2 { x, y } =
     Record (x |> round |> millisToPosix) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just y) Nothing Nothing 0
 
 
-myWidth =
+myPlotWidth =
     800
 
 
-myHeight =
-    350
+myPlotHeight =
+    280
 
 
 titleKaggleLink : Element Msg
 titleKaggleLink =
-    column
-        [ spacing 2
-        , width fill
-        , centerX
-        ]
-        [ newTabLink [ centerX ]
+    el [ height fill, width fill ] <|
+        newTabLink [ centerX, centerY ]
             { url =
                 "https://www.kaggle.com/decide-soluciones/air-quality-madrid"
             , label =
-                el
-                    [ centerX
-                    , displaySerif
-                    , Font.size 24
+                column [ spacing 2 ]
+                    [ el
+                        [ centerX
+                        , displaySerif
+                        , Font.size 24
+                        ]
+                      <|
+                        text "Madrid Air Quality"
+                    , el
+                        [ centerX
+                        , thinSans
+                        , Font.size 27
+                        , Font.wordSpacing -2
+                        ]
+                      <|
+                        text "Plaza de España"
                     ]
-                <|
-                    text "Madrid Air Quality"
             }
-        , el
-            [ centerX
-            , thinSans
-            , Font.size 27
-            , Font.wordSpacing -2
-            ]
-          <|
-            text "Plaza de España"
-        ]
 
 
 plotNO : Model -> Element Msg
 plotNO model =
-    el
-        [ width <| px myWidth
-        , height <| px myHeight
-        ]
-        (Plot.custom
-            { lines =
-                [ LineChart.line
-                    Colors.purple
-                    Dots.circle
-                    ""
-                    recordsNO
-                ]
-            , toMsg = ToPlot PlotNO
-            , xAcc = .date >> posixToMillis >> toFloat
-            , yAcc = .no >> Maybe.withDefault 0
-            , pointDecoder = pointDecoderNO
-            }
-            |> Plot.width myWidth
-            |> Plot.height myHeight
-            |> Plot.xIsTime True
-            |> Plot.marginLeft 60
-            |> Plot.marginRight 60
-            |> Plot.yAxisLabel "NO [μg/m³]"
-            |> Plot.yAxisLabelOffsetX 30
-            |> Plot.yAxisLabelOffsetY 20
-            |> Plot.draw model.plotNO
-        )
+    Plot.custom
+        { lines =
+            [ LineChart.line
+                Colors.purple
+                Dots.circle
+                ""
+                recordsNO
+            ]
+        , toMsg = ToPlot PlotNO
+        , xAcc = .date >> posixToMillis >> toFloat
+        , yAcc = .no >> Maybe.withDefault 0
+        , pointDecoder = pointDecoderNO
+        }
+        |> Plot.width myPlotWidth
+        |> Plot.height myPlotHeight
+        |> Plot.xIsTime True
+        |> Plot.marginLeft 70
+        |> Plot.marginRight 40
+        |> Plot.yAxisLabel "NO [μg/m³]"
+        |> Plot.yAxisLabelOffsetX 30
+        |> Plot.yAxisLabelOffsetY 20
+        |> Plot.draw model.plotNO
 
 
 plotSO2 : Model -> Element Msg
 plotSO2 model =
-    el
-        [ width <| px myWidth
-        , height <| px myHeight
-        ]
-        (Plot.custom
-            { lines =
-                [ LineChart.line
-                    Colors.blue
-                    Dots.circle
-                    ""
-                    recordsSO2
-                ]
-            , toMsg = ToPlot PlotSO2
-            , xAcc = .date >> posixToMillis >> toFloat
-            , yAcc = .so_2 >> Maybe.withDefault 0
-            , pointDecoder = pointDecoderSO2
-            }
-            |> Plot.width myWidth
-            |> Plot.height myHeight
-            |> Plot.xIsTime True
-            |> Plot.marginLeft 60
-            |> Plot.marginRight 60
-            |> Plot.marginTop 50
-            |> Plot.yAxisLabel "SO₂ [μg/m³]"
-            |> Plot.yAxisLabelOffsetX 35
-            |> Plot.yAxisLabelOffsetY 20
-            |> Plot.draw model.plotSO2
-        )
+    Plot.custom
+        { lines =
+            [ LineChart.line
+                Colors.blue
+                Dots.circle
+                ""
+                recordsSO2
+            ]
+        , toMsg = ToPlot PlotSO2
+        , xAcc = .date >> posixToMillis >> toFloat
+        , yAcc = .so_2 >> Maybe.withDefault 0
+        , pointDecoder = pointDecoderSO2
+        }
+        |> Plot.width myPlotWidth
+        |> Plot.height myPlotHeight
+        |> Plot.xIsTime True
+        |> Plot.marginLeft 70
+        |> Plot.marginRight 40
+        |> Plot.marginTop 50
+        |> Plot.yAxisLabel "SO₂ [μg/m³]"
+        |> Plot.yAxisLabelOffsetX 35
+        |> Plot.yAxisLabelOffsetY 20
+        |> Plot.draw model.plotSO2
 
 
 signatureDocumentationLink : Element Msg
 signatureDocumentationLink =
-    link [ centerX ]
-        { url =
-            "https://package.elm-lang.org/packages/RalfNorthman/elm-zoom-plot/latest"
-        , label =
-            paragraph [ Font.center, padding 50 ]
-                [ el [ displaySerif ] <|
-                    text "Ralf Northman "
-                , el
-                    [ separator
-                    , Font.size 35
+    el
+        [ centerX
+        , height fill
+        ]
+    <|
+        link [ centerY ]
+            { url =
+                "https://package.elm-lang.org/packages/RalfNorthman/elm-zoom-plot/latest"
+            , label =
+                paragraph [ Font.center, padding 20 ]
+                    [ el [ displaySerif ] <|
+                        text "Ralf Northman "
+                    , el
+                        [ separator
+                        , Font.size 35
+                        ]
+                      <|
+                        text "|"
+                    , el
+                        [ thinSans
+                        , Font.size 25
+                        ]
+                      <|
+                        text " elm-zoom-plot"
                     ]
-                  <|
-                    text "|"
-                , el
-                    [ thinSans
-                    , Font.size 25
-                    ]
-                  <|
-                    text " elm-zoom-plot"
-                ]
-        }
+            }
 
 
 view : Model -> Html Msg
@@ -310,6 +302,7 @@ view model =
         column
             [ spacing 2
             , width fill
+            , height fill
             ]
             [ titleKaggleLink
             , el [ plotSans, centerX ] <| plotNO model
