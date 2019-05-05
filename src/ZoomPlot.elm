@@ -286,7 +286,7 @@ type Config data msg
         }
 
 
-{-| Use this configuration as a starting point when your data is just a `List Point`:
+{-| Use this configuration as a starting point when your data is just a `List Point`.
 
     type alias Point =
         { x : Float, y : Float }
