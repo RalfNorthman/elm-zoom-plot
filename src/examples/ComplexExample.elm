@@ -4,10 +4,12 @@ import Browser
 import Browser.Dom exposing (Error, Viewport, getViewport)
 import Browser.Events
 import Color exposing (toRgba)
+import Data
 import DateFormat.Language
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
+import Element.Font as Font
 import FormatNumber
 import FormatNumber.Locales
 import Html exposing (Html)
@@ -15,20 +17,70 @@ import LineChart
 import LineChart.Colors as Colors
 import LineChart.Coordinate
 import LineChart.Dots as Dots
+import Maybe.Extra
 import Task exposing (Task)
-import Time exposing (Posix)
+import Time exposing (Month(..), Posix, millisToPosix, posixToMillis)
+import Time.Extra
 import ZoomPlot as Plot
 
 
-
----- Example type for the data we're going to plot ----
-
-
-type alias ExampleType =
-    { time : Posix
-    , value : Float
-    , text : String
+type alias Record =
+    { date : Posix
+    , ben : Maybe Float
+    , ch4 : Maybe Float
+    , co : Maybe Float
+    , ebe : Maybe Float
+    , nmhc : Maybe Float
+    , no : Maybe Float
+    , no_2 : Maybe Float
+    , nox : Maybe Float
+    , o_3 : Maybe Float
+    , pm10 : Maybe Float
+    , pm25 : Maybe Float
+    , so_2 : Maybe Float
+    , tch : Maybe Float
+    , tol : Maybe Float
+    , station : Int
     }
+
+
+type alias Point =
+    { x : Float, y : Float }
+
+
+myFilter : (Record -> Maybe Float) -> Int -> List Record
+myFilter acc day =
+    let
+        from : Posix
+        from =
+            Time.Extra.Parts 2018 Mar 1 13 0 0 0
+                |> Time.Extra.partsToPosix Time.utc
+
+        to : Posix
+        to =
+            Time.Extra.Parts 2018 Mar day 2 0 0 0
+                |> Time.Extra.partsToPosix Time.utc
+
+        between : Posix -> Posix -> Posix -> Bool
+        between a b x =
+            (posixToMillis x > posixToMillis a)
+                && (posixToMillis x < posixToMillis b)
+    in
+    Data.records
+        |> List.filter
+            (\r -> acc r |> Maybe.Extra.isJust)
+        |> List.filter
+            (\r -> between from to r.date)
+
+
+recordsNO : List Record
+recordsNO =
+    myFilter .no 15
+
+
+recordsSO2 : List Record
+recordsSO2 =
+    myFilter .so_2 30
 
 
 
@@ -36,245 +88,227 @@ type alias ExampleType =
 
 
 type alias Model =
-    { plot1 : Plot.State ExampleType
-    , plot2 : Plot.State ExampleType
-    , plot3 : Plot.State ExampleType
-    , plotWidth : Float
-    , plotHeight : Float
+    { plotNO : Plot.State Record
+    , plotSO2 : Plot.State Record
     }
 
 
-init : ( Model, Cmd Msg )
+init : ( Model, Cmd msg )
 init =
-    ( { plot1 = Plot.init
-      , plot2 = Plot.init
-      , plot3 = Plot.init
-      , plotWidth = 0
-      , plotHeight = 0
+    ( { plotNO = Plot.init
+      , plotSO2 = Plot.init
       }
-    , getInitialBrowserSize
+    , Cmd.none
     )
-
-
-plotConfig : List (LineChart.Series ExampleType) -> Plot.Config ExampleType
-plotConfig lines =
-    let
-        default =
-            Plot.defaultConfigWith
-                []
-                (.time >> Time.posixToMillis >> toFloat)
-                .value
-                myPointDecoder
-    in
-    { default
-        | lines = lines
-        , xIsTime = True
-        , showLegends = True
-        , labelFunc = .text
-        , language = DateFormat.Language.swedish
-        , numberFormat =
-            \x ->
-                FormatNumber.format FormatNumber.Locales.frenchLocale x
-        , marginTop = 20
-        , marginRight = 130
-        , marginBottom = 30
-        , marginLeft = 70
-    }
-
-
-myPointDecoder : LineChart.Coordinate.Point -> ExampleType
-myPointDecoder { x, y } =
-    ExampleType (x |> floor |> Time.millisToPosix) y ""
 
 
 
 ---- UPDATE ----
 
 
-type PlotNr
-    = Plot1
-    | Plot2
-    | Plot3
+type MyPlot
+    = PlotNO
+    | PlotSO2
 
 
 type Msg
-    = ToPlot PlotNr (Plot.Msg ExampleType)
-    | BrowserResize Int Int
-    | InitialBrowserSize (Result Error Viewport)
+    = ToPlot MyPlot (Plot.Msg Record)
 
 
-getInitialBrowserSize : Cmd Msg
-getInitialBrowserSize =
-    getViewport
-        |> Task.attempt InitialBrowserSize
-
-
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd msg )
 update msg model =
     case msg of
-        ToPlot Plot1 plotMsg ->
-            ( { model | plot1 = Plot.update (plotConfig lines1) plotMsg model.plot1 }
-            , Cmd.none
-            )
+        ToPlot PlotNO plotMsg ->
+            ( { model | plotNO = Plot.update plotMsg model.plotNO }, Cmd.none )
 
-        ToPlot Plot2 plotMsg ->
-            ( { model | plot2 = Plot.update (plotConfig lines2) plotMsg model.plot2 }
-            , Cmd.none
-            )
-
-        ToPlot Plot3 plotMsg ->
-            ( { model | plot3 = Plot.update (plotConfig lines3) plotMsg model.plot3 }
-            , Cmd.none
-            )
-
-        BrowserResize width height ->
-            ( updatePlotDimensions model (toFloat width) (toFloat height)
-            , Cmd.none
-            )
-
-        InitialBrowserSize result ->
-            case result of
-                Ok { viewport } ->
-                    ( updatePlotDimensions
-                        model
-                        viewport.width
-                        viewport.height
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
-
-
-updatePlotDimensions : Model -> Float -> Float -> Model
-updatePlotDimensions model width height =
-    let
-        realEstate : Float -> Float
-        realEstate dimension =
-            dimension - boxSize - 2 * layoutPadding
-    in
-    { model
-        | plotWidth = realEstate width
-        , plotHeight = realEstate height / 3 - 5
-    }
+        ToPlot PlotSO2 plotMsg ->
+            ( { model | plotSO2 = Plot.update plotMsg model.plotSO2 }, Cmd.none )
 
 
 
 ---- VIEW ----
 
 
-myLine color shape title data =
-    LineChart.line color shape title data
-
-
-lines1 : List (LineChart.Series ExampleType)
-lines1 =
-    [ myLine Colors.goldLight Dots.diamond "polysin" polySinData
-    , myLine Colors.greenLight Dots.square "poly" polyData
-    ]
-
-
-lines2 : List (LineChart.Series ExampleType)
-lines2 =
-    [ myLine Colors.greenLight Dots.square "poly" polyData
-    , myLine Colors.goldLight Dots.diamond "polysin" polySinData
-    , myLine Colors.pinkLight Dots.plus "poly3xsin" poly3xSinData
-    ]
-
-
-lines3 : List (LineChart.Series ExampleType)
-lines3 =
-    [ myLine Colors.tealLight Dots.circle "cos" cosData
-    , myLine Colors.goldLight Dots.diamond "polysin" polySinData
-    , myLine Colors.pinkLight Dots.plus "poly3xsin" poly3xSinData
-    ]
-
-
-col : Color.Color -> Element.Color
-col color =
-    fromRgb (toRgba color)
-
-
-greyBox : Element Msg
-greyBox =
-    el
-        [ width <| px boxSize
-        , height <| px boxSize
-        , Background.color <| col Colors.grayLightest
-        , Border.rounded 20
-        , Border.width 1
-        , Border.color <| col Colors.grayLight
+googleFont : String -> Attribute Msg
+googleFont fontName =
+    let
+        fontString =
+            String.replace " " "+" fontName
+    in
+    Font.family
+        [ Font.external
+            { url =
+                "https://fonts.googleapis.com/css?family="
+                    ++ fontString
+            , name = fontName
+            }
         ]
-        none
 
 
-invisibleBox : Element Msg
-invisibleBox =
+displaySerif : Attribute Msg
+displaySerif =
+    googleFont "Playfair Display"
+
+
+thinSans : Attribute Msg
+thinSans =
+    googleFont "Gruppo"
+
+
+plotSans : Attribute Msg
+plotSans =
+    googleFont "Montserrat"
+
+
+separator : Attribute Msg
+separator =
+    googleFont "Nixie One"
+
+
+myPlotWidth =
+    800
+
+
+myPlotHeight =
+    280
+
+
+titleKaggleLink : Element Msg
+titleKaggleLink =
+    el [ height fill, width fill ] <|
+        newTabLink [ centerX, centerY ]
+            { url =
+                "https://www.kaggle.com/decide-soluciones/air-quality-madrid"
+            , label =
+                column [ spacing 2 ]
+                    [ el
+                        [ centerX
+                        , displaySerif
+                        , Font.size 24
+                        ]
+                      <|
+                        text "Madrid Air Quality"
+                    , el
+                        [ centerX
+                        , thinSans
+                        , Font.size 27
+                        , Font.wordSpacing -2
+                        ]
+                      <|
+                        text "Plaza de España"
+                    ]
+            }
+
+
+plotNO : Model -> Element Msg
+plotNO model =
+    Plot.custom
+        { lines =
+            [ LineChart.line
+                Colors.purple
+                Dots.circle
+                ""
+                recordsNO
+            ]
+        , toMsg = ToPlot PlotNO
+        , xAcc = .date >> posixToMillis >> toFloat
+        , yAcc = .no >> Maybe.withDefault 0
+        , pointDecoder = pointDecoderNO
+        }
+        |> Plot.width myPlotWidth
+        |> Plot.height myPlotHeight
+        |> Plot.xIsTime True
+        |> Plot.marginLeft 70
+        |> Plot.marginRight 40
+        |> Plot.yAxisLabel "NO [μg/m³]"
+        |> Plot.yAxisLabelOffsetX 30
+        |> Plot.yAxisLabelOffsetY -15
+        |> Plot.draw model.plotNO
+
+
+pointDecoderNO : Point -> Record
+pointDecoderNO { x, y } =
+    Record (x |> round |> millisToPosix) Nothing Nothing Nothing Nothing Nothing (Just y) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing 0
+
+
+plotSO2 : Model -> Element Msg
+plotSO2 model =
+    Plot.custom
+        { lines =
+            [ LineChart.line
+                Colors.blue
+                Dots.circle
+                ""
+                recordsSO2
+            ]
+        , toMsg = ToPlot PlotSO2
+        , xAcc = .date >> posixToMillis >> toFloat
+        , yAcc = .so_2 >> Maybe.withDefault 0
+        , pointDecoder = pointDecoderSO2
+        }
+        |> Plot.width myPlotWidth
+        |> Plot.height myPlotHeight
+        |> Plot.xIsTime True
+        |> Plot.marginLeft 70
+        |> Plot.marginRight 40
+        |> Plot.marginTop 50
+        |> Plot.yAxisLabel "SO₂ [μg/m³]"
+        |> Plot.yAxisLabelOffsetX 35
+        |> Plot.yAxisLabelOffsetY -20
+        |> Plot.draw model.plotSO2
+
+
+pointDecoderSO2 : Point -> Record
+pointDecoderSO2 { x, y } =
+    Record (x |> round |> millisToPosix) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just y) Nothing Nothing 0
+
+
+signatureDocumentationLink : Element Msg
+signatureDocumentationLink =
     el
-        [ width <| px boxSize
-        , height <| px boxSize
+        [ centerX
+        , height fill
         ]
-        none
-
-
-boxSize =
-    150
-
-
-layoutPadding =
-    10
+    <|
+        link [ centerY ]
+            { url =
+                "https://package.elm-lang.org/packages/RalfNorthman/elm-zoom-plot/latest"
+            , label =
+                paragraph [ Font.center, padding 20 ]
+                    [ el [ displaySerif ] <|
+                        text "Ralf Northman "
+                    , el
+                        [ separator
+                        , Font.size 35
+                        ]
+                      <|
+                        text "|"
+                    , el
+                        [ thinSans
+                        , Font.size 25
+                        ]
+                      <|
+                        text " elm-zoom-plot"
+                    ]
+            }
 
 
 view : Model -> Html Msg
 view model =
-    let
-        myDraw lines acc rout =
-            Plot.draw
-                model.plotWidth
-                model.plotHeight
-                (plotConfig lines)
-                (acc model)
-                (\msg -> ToPlot rout msg)
-    in
-    Element.layout
-        [ width fill
-        , height fill
-        , padding layoutPadding
+    layout
+        [ padding 20
         ]
     <|
-        row
-            [ width fill
+        column
+            [ spacing 2
+            , width fill
             , height fill
             ]
-            [ column
-                [ width fill
-                , height fill
-                ]
-                [ el [ centerX ] greyBox
-                , column
-                    [ width fill
-                    , height fill
-                    ]
-                    [ myDraw lines1 .plot1 Plot1
-                    , myDraw lines2 .plot2 Plot2
-                    , myDraw lines3 .plot3 Plot3
-                    ]
-                ]
-            , column
-                [ height fill ]
-                [ el [ alignTop ] invisibleBox
-                , el [ centerY ] greyBox
-                ]
+            [ titleKaggleLink
+            , el [ plotSans, centerX ] <| plotNO model
+            , el [ plotSans, centerX ] <| plotSO2 model
+            , signatureDocumentationLink
             ]
-
-
-
----- SUBSCRIPTIONS ----
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Browser.Events.onResize BrowserResize
 
 
 
@@ -287,69 +321,5 @@ main =
         { view = view
         , init = \_ -> init
         , update = update
-        , subscriptions = subscriptions
+        , subscriptions = \_ -> Sub.none
         }
-
-
-
----- TEST-DATA ----
-
-
-makeData : (Float -> Float) -> Float -> List ExampleType
-makeData func scale =
-    let
-        indexedValues : List ( Int, Float )
-        indexedValues =
-            List.indexedMap
-                (\i x -> Tuple.pair i (toFloat x * scale))
-            <|
-                List.range -221 65
-
-        addStringValue : Int -> String
-        addStringValue index =
-            case modBy 3 index of
-                0 ->
-                    "Wichita Vortex"
-
-                1 ->
-                    "KxKc 3"
-
-                _ ->
-                    "Bolobooz"
-
-        pairToFoobar : ( Int, Float ) -> ExampleType
-        pairToFoobar ( i, x ) =
-            ExampleType
-                (x
-                    |> floor
-                    |> Time.millisToPosix
-                )
-                (func <| x / scale)
-                (addStringValue i)
-    in
-    List.map pairToFoobar indexedValues
-
-
-polySinData : List ExampleType
-polySinData =
-    makeData (\x -> 0.005 * x ^ 2 - 0.2 * x - 0.5 + 10 * sin x)
-        100000
-
-
-polyData : List ExampleType
-polyData =
-    makeData (\x -> 0.00006 * x ^ 3 + 0.013 * x ^ 2 - 0.1 * x - 0.5)
-        200000
-
-
-poly3xSinData : List ExampleType
-poly3xSinData =
-    makeData
-        (\x -> 0.03 * x ^ 2 - 0.5 * x - 3.5 + 50 * sin (3 * x))
-        10000000
-
-
-cosData : List ExampleType
-cosData =
-    makeData (\x -> 1000 + 100 * cos (x / 3))
-        100000000
