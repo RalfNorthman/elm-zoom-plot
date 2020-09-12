@@ -1076,7 +1076,7 @@ dragBox model a b system =
             model.yAcc
     in
     Junk.rectangle system
-        [ SvgAttr.fill <| Fill Colors.grayLightest ]
+        [ SvgAttr.fill <| Paint Colors.grayLightest ]
         (min (xAcc a) (xAcc b))
         (max (xAcc a) (xAcc b))
         (min (yAcc a) (yAcc b))
@@ -1135,7 +1135,7 @@ hoverJunk model hovered sys =
                         [ SvgAttrPx.dy <| fontHeights * (fontSize + 2)
                         , SvgAttr.alignmentBaseline AlignmentTextBeforeEdge
                         , SvgAttr.textAnchor AnchorEnd
-                        , SvgAttr.stroke Color.white
+                        , SvgAttr.stroke <| Paint Color.white
                         , SvgAttrPx.strokeWidth 5
                         ]
 

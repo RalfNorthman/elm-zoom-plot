@@ -4,6 +4,10 @@ The main objective of this package is to draw line charts which have:
 * mouse drag zoom
 * reasonable time axes
 
+See it in action:
+https://ralfnorthman.github.io/elm-zoom-plot/
+
+Sample code:
 
 ```elm
 import ZoomPlot as Plot
